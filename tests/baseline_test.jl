@@ -13,14 +13,14 @@ rhs(x, y, t) =
 	(-t * exp(-(x - 0.5)^2 - (y - 0.5)^2) * sin(t * x) + (1.0 - 2 * x) * exp(-(x - 0.5)^2 - (y - 0.5)^2) * cos(t * x)) *
 	(14.0911959422021 * pi * t * exp((x - 0.5)^2 + (y - 0.5)^2) * cos(15 * pi * t * x) + 4 * pi * t * sin(4 * pi * t * y) * cos(4 * pi * t * x) + 0.939413062813476 * (2 * x - 1.0) * exp((x - 0.5)^2 + (y - 0.5)^2) * sin(15 * pi * t * x))
 
-g(x::Tuple, t) = -t*(pi)^2*(x[1]^2 + x[2]^2)*sin(pi*x[1])*sin(pi*x[2])
-#g(x::Tuple, t) = rhs(x[1], x[2], t)
+#g(x::Tuple, t) = -sin(t)*2*(pi)^2*sin(pi*x[1])*sin(pi*x[2])
+g(x::Tuple, t) = rhs(x[1], x[2], t)
 
-a(x::Tuple, t) = 1
-#a(x::Tuple, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
+#a(x::Tuple, t) = 1
+a(x::Tuple, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
 
 prob = LSMOD.EllipticPDE(
-	10, # discretisation (each direction)
+	100, # discretisation (each direction)
 	0.0, # xmin
 	1.0, # xmax
 	0.0, # ymin
@@ -28,18 +28,19 @@ prob = LSMOD.EllipticPDE(
 	a, # wave speed (~ish)
 	g, # rhs
 )
-exact(x, t) = sin(pi*x[1])*sin(pi*x[2])*t
-#exact(x, t) = sin(4 * pi * x[2] * t) * sin(4 * pi * x[1] * t) + sin(15 * pi * x[1] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2)
-sols = LSMOD.solve(0, 1e-3, 1000, prob);
+#exact(x, t) = sin(pi*x[1])*sin(pi*x[2])*sin(t)
+exact(x, t) = sin(4 * pi * x[2] * t) * sin(4 * pi * x[1] * t) + sin(15 * pi * x[1] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2)
+sols = LSMOD.solve(2.3, 1e-3, 200, prob);
+
+eff(x) = exact(x, sols[end][:time])
+
+# surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
+# 	collect(Iterators.flatten(getfield.(prob.grid, 2))),
+# 	sols[end][:x])
 
 surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
 	collect(Iterators.flatten(getfield.(prob.grid, 2))),
-	sols[end][:x])
-
-#eff(x) = exact(x, sols[end][:time])
-#surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
-#	collect(Iterators.flatten(getfield.(prob.grid, 2))),
-#	collect(Iterators.flatmap(eff,prob.grid)))
+	collect(Iterators.flatmap(eff,prob.grid)) - sols[end][:x])
 
 #println(norm(sols[end]["x"] - collect(Iterators.flatmap(eff,prob.grid)))/norm(sols[end]["x"]))
 

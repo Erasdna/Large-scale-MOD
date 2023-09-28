@@ -31,11 +31,7 @@ struct DifferentialOperators2D
 			2 => (-1) .* ones(N - 2),
 			1 => (16) .* ones(N - 1),
 		)
-		DD[1,1]=12 * hx^2
-		DD[1,2:end].=0.0
-		DD[end,end]=12 * hx^2
-		DD[end,1:end-1].=0.0
-
+		
 		id = sparse(I, N, N)
 		new(kron(id, D) ./ (12 * hx), kron(D, id) ./ (12 * hy), kron(id, DD) ./ (12 * hx^2), kron(DD, id) ./ (12 * hy^2))
 	end
