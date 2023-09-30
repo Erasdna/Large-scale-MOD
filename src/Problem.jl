@@ -1,5 +1,3 @@
-using SparseArrays, LinearAlgebra
-
 export Problem, EllipticPDE
 export DifferentialOperators2D
 
@@ -47,6 +45,7 @@ struct EllipticPDE <: Problem
 	a::Any
 	rhs::Any
 	∂D::DifferentialOperators2D
+	edge
 	function EllipticPDE(
 		N::Int64,
 		xmin::Float64,
@@ -59,7 +58,7 @@ struct EllipticPDE <: Problem
 		@assert ymax > ymin
 		@assert xmax > xmin
 
-		new(collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N))), a, rhs, DifferentialOperators2D(N, (xmax - xmin) / N, (ymax - ymin) / N))
+		new(collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N))), a, rhs, DifferentialOperators2D(N, (xmax - xmin) / N, (ymax - ymin) / N),sort(collect([1:N; (N+1):N:(N^2 - 2*N + 1); (2*N):N:(N^2 -N); (N^2 - N + 1):N^2])))
 	end
 end
 

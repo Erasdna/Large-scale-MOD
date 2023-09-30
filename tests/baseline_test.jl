@@ -16,6 +16,8 @@ rhs(x, y, t) =
 #g(x::Tuple, t) = -sin(t)*2*(pi)^2*sin(pi*x[1])*sin(pi*x[2])
 g(x::Tuple, t) = rhs(x[1], x[2], t)
 
+
+
 #a(x::Tuple, t) = 1
 a(x::Tuple, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
 
