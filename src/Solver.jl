@@ -4,6 +4,7 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 	"""
 		Baseline iterative solver
 	"""
+	prevsol=[]
 	solutions = Array{Dict}(undef, N)
 	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1)*Δt))) 
 	for (i, time) ∈ iter

@@ -7,8 +7,8 @@ a(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
 a(x::Tuple, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
 
 #Exact solution
-exact(x::Vector, t) = sin(4 * pi * x[2] * t) * sin(4 * pi * x[1] * t) + sin(15 * pi * x[1] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2)
-exact(x::Tuple, t) = sin(4 * pi * x[2] * t) * sin(4 * pi * x[1] * t) + sin(15 * pi * x[1] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2)
+exact(x::Vector, t) = sin(4 * pi * x[2] * t) * sin(4 * pi * x[1] * t) + sin(15 * pi * x[1] * t)* sin(15 * pi * x[2] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2)
+exact(x::Tuple, t) = sin(4 * pi * x[2] * t) * sin(4 * pi * x[1] * t) + sin(15 * pi * x[1] * t) * sin(15 * pi * x[2] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2)
 
 #We calculate the rhs function using automatic differentiation
 function rhs(x::Tuple,t,a,exact)
