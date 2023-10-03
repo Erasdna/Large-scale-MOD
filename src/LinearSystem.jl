@@ -1,3 +1,5 @@
+import InvertedIndices
+
 export updateLinearSystem
 
 function updateLinearSystem(problem::EllipticPDE, time::Float64)
@@ -7,20 +9,23 @@ function updateLinearSystem(problem::EllipticPDE, time::Float64)
     func(x::Vector) = problem.a(x,time)
     func(x::Tuple) = problem.a(x,time)
 
-    a=flatmap(func,problem.grid)
+    inner_grid = vcat(problem.grid)[InvertedIndices.Not(problem.edge)]
+
+    a=map(func,inner_grid)
     ∇a(x::Tuple) = ForwardDiff.gradient(func,[x...])
-    val = collect(flatmap(∇a,problem.grid))
+    val = map(∇a,inner_grid)
 
-    ∂a∂x = val[1:2:end] #getfield.(val,1)
-    ∂a∂y = val[2:2:end] #getfield.(val,2)
+    ∂a∂x = getindex.(val,1)
+    ∂a∂y = getindex.(val,2)
 
-    A = collect(a)' .* (problem.∂D.∂²x + problem.∂D.∂²y) +  (∂a∂x .* problem.∂D.∂x + ∂a∂y .* problem.∂D.∂y)
-    edge = problem.edge
-    A[edge,:].=0
-    A[edge,edge] = sparse(I,length(edge),length(edge))
+    A = a' .* (problem.∂D.∂²x + problem.∂D.∂²y) +  (∂a∂x .* problem.∂D.∂x + ∂a∂y .* problem.∂D.∂y)
+    #@assert(A==A')
+    #edge = problem.edge
+    #A[edge,:].=0
+    #A[edge,edge] = sparse(I,length(edge),length(edge))
     rhs_func(x) = problem.rhs(x,time)
-    rhs = collect(flatmap(rhs_func,problem.grid))
-    rhs[edge].=0.0
+    rhs = map(rhs_func,inner_grid)
+    #rhs[edge].=0.0
 
     return A, rhs
 end

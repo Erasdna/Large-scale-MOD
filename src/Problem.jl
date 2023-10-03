@@ -41,13 +41,14 @@ struct EllipticPDE <: Problem
 		Problem on the form ∇⋅(a(x,t)∇f(x,t)) = rhs(x,t)
 		with corresponding grid and differential operators
 	"""
+	internal::Integer
 	grid::Any
 	a::Any
 	rhs::Any
 	∂D::DifferentialOperators2D
 	edge
 	function EllipticPDE(
-		N::Int64,
+		in::Int64,
 		xmin::Float64,
 		xmax::Float64,
 		ymin::Float64,
@@ -58,7 +59,8 @@ struct EllipticPDE <: Problem
 		@assert ymax > ymin
 		@assert xmax > xmin
 
-		new(collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N))), a, rhs, DifferentialOperators2D(N, (xmax - xmin) / N, (ymax - ymin) / N),sort(collect([1:N; (N+1):N:(N^2 - 2*N + 1); (2*N):N:(N^2 -N); (N^2 - N + 1):N^2])))
+		N = in+2
+		new(in,collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N))), a, rhs, DifferentialOperators2D(in, (xmax - xmin) / N, (ymax - ymin) / N),sort(collect([1:N; (N+1):N:(N^2 - 2*N + 1); (2*N):N:(N^2 -N); (N^2 - N + 1):N^2])))
 	end
 end
 

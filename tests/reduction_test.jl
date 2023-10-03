@@ -7,8 +7,8 @@ a(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
 a(x::Tuple, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
 
 #Exact solution
-exact(x::Vector, t) = sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(15 * pi * x[2] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
-exact(x::Tuple, t) = sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(15 * pi * x[2] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
+exact(x::Vector, t) = sin(t)*sin(2*pi*x[1])*sin(2*pi*x[2])*(1 + exp((x[1]-0.5)^2 + (x[2]-0.5)^2)) #sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
+exact(x::Tuple, t) = sin(t)*sin(2*pi*x[1])*sin(2*pi*x[2])#sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
 
 #We calculate the rhs function using automatic differentiation
 function rhs(x::Tuple,t,a,exact)
@@ -33,16 +33,20 @@ prob = LSMOD.EllipticPDE(
 	g, # rhs
 )
 
-sols = LSMOD.solve(2.3, 1e-5, 10, prob);
+sols = LSMOD.solve(2.3, 1e-5, 200, prob);
 
 eff(x) = exact(x, sols[end][:time])
 
-println(norm(collect(Iterators.flatmap(eff,prob.grid)) - sols[end][:x])/norm(sols[end][:x]))
+println(maximum(collect(Iterators.flatmap(eff,prob.grid)) - sols[end][:x]))
+
 ff = surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
 	collect(Iterators.flatten(getfield.(prob.grid, 2))),
-	sols[end][:x]);
+	reshape(sols[end][:IG],(100,100)));
 
 ff2 = surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
 	collect(Iterators.flatten(getfield.(prob.grid, 2))),
 	abs.(collect(Iterators.flatmap(eff,prob.grid)) -sols[end][:x]));
 
+ff3 = surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
+	collect(Iterators.flatten(getfield.(prob.grid, 2))),
+	sols[end][:x]);
