@@ -31,7 +31,11 @@ struct DifferentialOperators2D
 		)
 		
 		id = sparse(I, N, N)
-		new(kron(id, D) ./ (12 * hx), kron(D, id) ./ (12 * hy), kron(id, DD) ./ (12 * hx^2), kron(DD, id) ./ (12 * hy^2))
+		new(kron(id, D) ./ (12 * hx), # ∂x operator
+			kron(D, id) ./ (12 * hy), # ∂y operator
+			kron(id, DD) ./ (12 * hx^2), # ∂²x operator
+			kron(DD, id) ./ (12 * hy^2) # ∂²y operator
+			)
 	end
 
 end
@@ -60,7 +64,13 @@ struct EllipticPDE <: Problem
 		@assert xmax > xmin
 
 		N = in+2
-		new(in,collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N))), a, rhs, DifferentialOperators2D(in, (xmax - xmin) / N, (ymax - ymin) / N),sort(collect([1:N; (N+1):N:(N^2 - 2*N + 1); (2*N):N:(N^2 -N); (N^2 - N + 1):N^2])))
+		new(in,
+			collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N))), 
+			a, 
+			rhs, 
+			DifferentialOperators2D(in, (xmax - xmin) / N, (ymax - ymin) / N),
+			sort(collect([1:N; (N+1):N:(N^2 - 2*N + 1); (2*N):N:(N^2 -N); (N^2 - N + 1):N^2]))
+			)
 	end
 end
 

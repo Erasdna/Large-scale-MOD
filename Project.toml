@@ -1,4 +1,5 @@
 [deps]
+CurveFit = "5a033b19-8c74-5913-a970-47c3779ef25c"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"

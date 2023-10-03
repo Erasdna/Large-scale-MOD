@@ -11,18 +11,11 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 	for (i, time) ∈ iter
 		A, rhs = updateLinearSystem(problem, time)
 		if i==1
-			sol, history = IterativeSolvers.gmres(A, rhs; log = true, abstol = 1e-7)
+			run_gmres!(nothing,A,rhs,iter,solutions,problem,i,time; use_guess=false)
 		else
-			sol, history = IterativeSolvers.gmres!(prevsol,A, rhs; log = true, abstol = 1e-7)
-		end			
-		res = norm(rhs - A*sol)
-		ProgressBars.set_postfix(iter, Iterations=Printf.@sprintf("%d",history.iters))
-		prevsol = copy(sol)
-
-		#Could do this in one line
-		full_sol = zeros((problem.internal+2)^2)
-		full_sol[InvertedIndices.Not(problem.edge)] .= sol
-		solutions[i] = Dict(:x => full_sol, :history => history, :time => time, :residual => res)
+			run_gmres!(prevsol[InvertedIndices.Not(problem.edge)],A,rhs,iter,solutions,problem,i,time)
+		end
+		prevsol = copy(solutions[i][:x])
 	end
 
 	return solutions
@@ -39,24 +32,33 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem,M::Integer,
 		A, rhs = updateLinearSystem(problem, time)
 		basis=reductionMethod(mat[InvertedIndices.Not(problem.edge),1:end],M,m)
 		AQ = A*basis
-		IG_small = AQ \ rhs #Go through QR
+		IG_small = qr(AQ) \ rhs #Go through QR + preconditioner
 		IG = basis * IG_small
-		sv = copy(IG)
 
 		#ProgressBars.println(iter,"Initial guess residual: ", norm(A*IG -rhs))
 		#incomplete lu
-		sol, history = IterativeSolvers.gmres!(IG,A, rhs; log = true, abstol=1e-7, verbose=false)
+		run_gmres!(IG,A,rhs,iter,solutions,problem,i+M,time)
 
-		res = norm(rhs - A*sol)
-		ProgressBars.set_postfix(iter, Iterations=Printf.@sprintf("%d",history.iters), r₀=Printf.@sprintf("%4.3e",res))
-		
-		#Could do this in one line
-		full_sol = zeros((problem.internal+2)^2)
-		full_sol[InvertedIndices.Not(problem.edge)] .= sol
-		mat=cat(mat,full_sol; dims=2)
-
-		solutions[i+M] = Dict(:x => full_sol, :history => history, :time => time, :residual => res, :IG => sv)
+		mat=cat(mat,solutions[i+M][:x]; dims=2)
 	end
 
 	return solutions
+end
+
+function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time;use_guess=true)
+	if use_guess
+		sv = copy(initial_guess)
+		sol, history = IterativeSolvers.gmres!(initial_guess,A, rhs; log = true, abstol=1e-7, verbose=false, restart=size(A, 2))
+	else
+		sv = nothing
+		sol, history = IterativeSolvers.gmres(A, rhs; log = true, abstol=1e-7, verbose=false, restart=size(A, 2))
+	end
+	res = norm(rhs - A*sol)
+	ProgressBars.set_postfix(iter, Iterations=Printf.@sprintf("%d",history.iters), r₀=Printf.@sprintf("%4.3e",res))
+	
+	#Could do this in one line
+	full_sol = zeros((problem.internal+2)^2)
+	full_sol[InvertedIndices.Not(problem.edge)] .= sol
+
+	solutions[index] = Dict(:x => full_sol, :history => history, :time => time, :residual => res, :IG => sv)
 end
