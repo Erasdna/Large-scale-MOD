@@ -11,7 +11,7 @@ a(x::Tuple) = a([x...])
 
 edge(n) = sort(collect([1:n; (n+1):n:(n^2 - 2*n + 1); (2*n):n:(n^2 -n); (n^2 - n + 1):n^2]))
 
-N = [20,40,80,160]
+N = [20,40,80,160, 200]
 
 #Testing only Δf(x,y):
 
@@ -28,14 +28,16 @@ for (i,n) ∈ enumerate(N)
     Δexact = map(exact1,inner)
     ed1 = edge(n)
     ed2 = edge(n-2)
-    real_N[i] = n^2 - length(ed1) - length(ed2)
+
+    #Remove two outermost edges because stencil will be incomplete
     Δapprox = (Δapprox[Not(ed1)])[Not(ed2)]
     Δexact = (Δexact[Not(ed1)])[Not(ed2)]
+    real_N[i] = length(Δexact)
     Laplacian_error[i] = norm(Δexact - Δapprox)
 end
 
-fit = curve_fit(LinearFit,log.(1 ./((N.+2).^2)),log.(Laplacian_error./real_N))
-p1 = Plots.plot(1 ./ ( (N.+2).^2 ) ,Laplacian_error./real_N, 
+fit = curve_fit(LinearFit,log.(1 ./((N.+2))),log.(Laplacian_error./real_N))
+p1 = Plots.plot(1 ./ ((N.+2)) ,Laplacian_error./real_N, 
     xaxis=:log,
     yaxis=:log, 
     title = "Δf convergence", 
@@ -71,8 +73,8 @@ for (i,n) ∈ enumerate(N)
     gradient_error[i] = norm(Δexact - Δapprox)
 end
 
-fit2 = curve_fit(LinearFit,log.(1 ./ ((N.+2).^2)),log.(gradient_error./real_N))
-p2=Plots.plot(1 ./ (N.+2).^2,gradient_error./real_N, 
+fit2 = curve_fit(LinearFit,log.(1 ./ ((N.+2))),log.(gradient_error./real_N))
+p2=Plots.plot(1 ./ (N.+2),gradient_error./real_N, 
     xaxis=:log,
     yaxis=:log, 
     title = "∇a∇f convergence", 
