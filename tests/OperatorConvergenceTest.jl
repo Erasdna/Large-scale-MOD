@@ -1,12 +1,12 @@
 using LinearAlgebra, InvertedIndices, ForwardDiff
 include("../src/LSMOD.jl")
 import .LSMOD
-using Plots;
+using Plots
 using CurveFit, Printf
 
-f(x::Vector) = sin(x[1])*sin(x[2])
+f(x::Vector) = sin(x[1]) + cos(x[2])
 f(x::Tuple) = f([x...])
-a(x::Vector) = x[1]*x[2]
+a(x::Vector) = x[1] + x[2]^2
 a(x::Tuple) = a([x...])
 
 edge(n) = sort(collect([1:n; (n+1):n:(n^2 - 2*n + 1); (2*n):n:(n^2 -n); (n^2 - n + 1):n^2]))

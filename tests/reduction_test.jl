@@ -7,8 +7,8 @@ a(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
 a(x::Tuple, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
 
 #Exact solution
-exact(x::Vector, t) = sin(t)*sin(2*pi*x[1])*sin(2*pi*x[2])*(1 + exp((x[1]-0.5)^2 + (x[2]-0.5)^2)) #sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
-exact(x::Tuple, t) = sin(t)*sin(2*pi*x[1])*sin(2*pi*x[2])*(1 + exp((x[1]-0.5)^2 + (x[2]-0.5)^2))#sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
+exact(x::Vector, t) = sin(4*pi*x[1])*sin(4*pi*x[2])*(1 + sin(15*pi*x[1]*t).*sin(3*pi*x[2]*t)*exp(-(x[1]-0.5)^2 - (x[2]-0.5)^2 - 0.25^2)) 
+exact(x::Tuple, t) = exact([x...],t) #sin(t)*sin(2*pi*x[1])*sin(2*pi*x[2])*(1 + exp((x[1]-0.5)^2 + (x[2]-0.5)^2))#sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
 
 #We calculate the rhs function using automatic differentiation
 function rhs(x::Tuple,t,a,exact)
@@ -33,7 +33,7 @@ prob = LSMOD.EllipticPDE(
 	g, # rhs
 )
 
-sols = LSMOD.solve(2.3, 1e-5, 200, prob,20,10,LSMOD.POD!);
+sols = LSMOD.solve(2.3, 1e-3, 200, prob,20,10,LSMOD.POD!);
 
 eff(x) = exact(x, sols[end][:time])
 
