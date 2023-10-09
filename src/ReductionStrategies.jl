@@ -1,17 +1,6 @@
 export POD!, RandomizedQR!
 import Statistics
 
-# mutable struct ReducedModel
-# 	M::Integer
-# 	m::Integer
-# 	basis::Any
-# 	LinAlgObject::Any
-
-# 	function ReducedModel(M::Integer, m::Integer)
-# 		new(M, m, Nothing, Nothing)
-# 	end
-# end
-
 function POD!(solutions, M, m)
 	dims = size(solutions)
 	@assert(dims[2] >= M)

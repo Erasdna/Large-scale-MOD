@@ -1,13 +1,13 @@
-using LinearAlgebra,ForwardDiff, Revise, Plots
+using LinearAlgebra,ForwardDiff, Revise, Plots, InvertedIndices
 include("../src/LSMOD.jl")
 using .LSMOD
 
 #Wave speed
 a(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
-a(x::Tuple, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
+a(x::Tuple, t) = a([x...],t)
 
 #Exact solution
-exact(x::Vector, t) = sin(4*pi*x[1])*sin(4*pi*x[2])*(1 + sin(15*pi*x[1]*t).*sin(3*pi*x[2]*t)*exp(-(x[1]-0.5)^2 - (x[2]-0.5)^2 - 0.25^2)) 
+exact(x::Vector, t) = sin(4*pi*x[1])*sin(4*pi*x[2])*(1 + sin(15*pi*x[1]*t)*sin(3*pi*x[2]*t)*exp(-(x[1]-0.5)^2 - (x[2]-0.5)^2 - 0.25^2)) 
 exact(x::Tuple, t) = exact([x...],t) #sin(t)*sin(2*pi*x[1])*sin(2*pi*x[2])*(1 + exp((x[1]-0.5)^2 + (x[2]-0.5)^2))#sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
 
 #We calculate the rhs function using automatic differentiation
@@ -33,19 +33,17 @@ prob = LSMOD.EllipticPDE(
 	g, # rhs
 )
 
-sols = LSMOD.solve(2.3, 1e-3, 200, prob,20,10,LSMOD.POD!);
+sols = LSMOD.solve(2.3, 1e-5, 25, prob,20,10,LSMOD.POD!);
 
 eff(x) = exact(x, sols[end][:time])
 
-println(norm(collect(Iterators.flatmap(eff,prob.grid)) - sols[end][:x])/norm(sols[end][:x]))
+exact_vals = collect(Iterators.flatmap(eff,prob.grid))[Not(prob.edge)]
+sol_vals = sols[end][:x][Not(prob.edge)]
+println(norm(exact_vals - sol_vals)/norm(sol_vals))
 
-ff = surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
-	collect(Iterators.flatten(getfield.(prob.grid, 2))),
-	reshape(sols[end][:IG],(100,100)));
-
-ff2 = surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
-	collect(Iterators.flatten(getfield.(prob.grid, 2))),
-	abs.(collect(Iterators.flatmap(eff,prob.grid)) -sols[end][:x]));
+ff2 = surface(collect(Iterators.flatten(getfield.(prob.grid, 1)))[Not(prob.edge)],
+	collect(Iterators.flatten(getfield.(prob.grid, 2)))[Not(prob.edge)],
+	abs.(exact_vals - sol_vals));
 
 ff3 = surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),
 	collect(Iterators.flatten(getfield.(prob.grid, 2))),

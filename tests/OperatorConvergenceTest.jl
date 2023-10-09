@@ -63,7 +63,7 @@ for (i,n) ∈ enumerate(N)
     ∂a∂x = getindex.(val,1)
     ∂a∂y = getindex.(val,2)
 
-    Δapprox = (∂a∂x .* problem.∂D.∂x + ∂a∂x .* problem.∂D.∂y)*f_val
+    Δapprox = (∂a∂x .* problem.∂D.∂x + ∂a∂y .* problem.∂D.∂y)*f_val
     Δexact = map(exact2,inner)
 
     ed1 = edge(n)
