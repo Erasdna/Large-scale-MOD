@@ -1,3 +1,5 @@
+using InvertedIndices: InvertedIndices
+
 export Problem, EllipticPDE
 export DifferentialOperators2D
 
@@ -29,13 +31,14 @@ struct DifferentialOperators2D
 			2 => (-1) .* ones(N - 2),
 			1 => (16) .* ones(N - 1),
 		)
-		
+
 		id = sparse(I, N, N)
+
 		new(kron(id, D) ./ (12 * hx), # ∂x operator
 			kron(D, id) ./ (12 * hy), # ∂y operator
 			kron(id, DD) ./ (12 * hx^2), # ∂²x operator
-			kron(DD, id) ./ (12 * hy^2) # ∂²y operator
-			)
+			kron(DD, id) ./ (12 * hy^2), # ∂²y operator
+		)
 	end
 
 end
@@ -47,10 +50,11 @@ struct EllipticPDE <: Problem
 	"""
 	internal::Integer
 	grid::Any
+	inner_grid::Any
 	a::Any
 	rhs::Any
 	∂D::DifferentialOperators2D
-	edge
+	edge::Any
 	function EllipticPDE(
 		in::Int64,
 		xmin::Float64,
@@ -63,14 +67,18 @@ struct EllipticPDE <: Problem
 		@assert ymax > ymin
 		@assert xmax > xmin
 
-		N = in+2
+		N = in + 2
+		edge = sort(collect([1:N; (N+1):N:(N^2-2*N+1); (2*N):N:(N^2-N); (N^2-N+1):N^2]))
+		grid = collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N)))
+		inner_grid = grid[InvertedIndices.Not(edge)]
 		new(in,
-			collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N))), 
-			a, 
-			rhs, 
+			grid,
+			inner_grid,
+			a,
+			rhs,
 			DifferentialOperators2D(in, (xmax - xmin) / N, (ymax - ymin) / N),
-			sort(collect([1:N; (N+1):N:(N^2 - 2*N + 1); (2*N):N:(N^2 -N); (N^2 - N + 1):N^2]))
-			)
+			edge,
+		)
 	end
 end
 

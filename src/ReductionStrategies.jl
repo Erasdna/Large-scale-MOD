@@ -1,25 +1,25 @@
 export POD!, RandomizedQR!
-import Statistics
 
-function POD!(solutions, M, m)
+function POD!(basis,solutions, M, m)
 	dims = size(solutions)
 	@assert(dims[2] >= M)
 
-	mat = solutions[:, end-M+1:end]
+	mat = @view solutions[:, end-M+1:end]
 	F = svd(mat)
-	return (F.U)[:, 1:m]
+	basis .= @view (F.U)[:, 1:m]
 end
 
-function RandomizedQR!(solutions, M, m)
+function RandomizedQR!(basis,solutions, M, m)
 	dims = size(solutions)
 	@assert(dims[2] >= M)
 
-	mat = solutions[:, end-M+1:end]
+	mat = @view solutions[:, end-M+1:end]
+
 	Z = randn((M, m))
 	Ω = mat * Z
-
+	
 	#Check out QRUpdate.jl?
 	F = qr(Ω)
-	return (F.Q)[:,1:m]
+	basis .= @view Matrix(F.Q)[:,1:m];
 end
 

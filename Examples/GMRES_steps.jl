@@ -50,12 +50,13 @@ prob = LSMOD.EllipticPDE(
         - Other settings:
             - GMRES without restarting
             - Tolerance: ||Ax - b||₂/||b||₂ ≤ 10⁻⁷
-            - (Not yet!) Incomplete LU preconditioner with no fill in
+            - Incomplete LU preconditioner with no fill in
             - Fourth order discretisation scheme in time
 """
 
 N=200
 steps = 1:200
+
 #Δt = 10⁻³
 sol_base_3,_ = LSMOD.solve(2.3, 1e-3, N, prob)
 sol_POD_3 = LSMOD.solve(2.3, 1e-3, N, prob, 20,10,LSMOD.POD!)
@@ -73,6 +74,7 @@ fig1 = scatter(steps,
             xlabel="Timestep",
             ylabel="GMRES iterations")
 Plots.savefig("Figures/10_3_with_precond.png")
+
 #Δt = 10⁻⁵
 sol_base_5,_ = LSMOD.solve(2.3, 1e-5, N, prob)
 sol_POD_5 = LSMOD.solve(2.3, 1e-5, N, prob, 35,20,LSMOD.POD!)

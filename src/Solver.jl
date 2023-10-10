@@ -10,47 +10,66 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 
 	LU=nothing
 
+	A = spzeros(problem.internal^2,problem.internal^2)
+	rhs = zeros(problem.internal^2)
+	mat = Matrix{Float64}(undef,problem.internal^2,N)
+	
 	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1)*Δt))) 
 	for (i, time) ∈ iter
-		A, rhs = updateLinearSystem(problem, time)
+		updateLinearSystem!(A,rhs,problem, time)
 
 		if i==1
 			LU=ILUZero.ilu0(A)
-			run_gmres!(nothing,A,rhs,iter,solutions,problem,i,time,LU; use_guess=false)
+			sol=run_gmres!(nothing,A,rhs,iter,solutions,problem,i,time,LU; use_guess=false)
 		else
 			ILUZero.ilu0!(LU,A)
-			run_gmres!(prevsol[InvertedIndices.Not(problem.edge)],A,rhs,iter,solutions,problem,i,time,LU)
+			sol=run_gmres!(prevsol,A,rhs,iter,solutions,problem,i,time,LU)
 		end
-		prevsol = copy(solutions[i][:x])
+		mat[:,i] .= copy(sol)
+		prevsol = copy(sol)
 	end
 
-	return solutions,LU
+	return solutions,LU,mat
 end
 
-function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem,M::Integer, m::Integer, reductionMethod)
+function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, M::Integer, m::Integer, reductionMethod)
 	solutions = Array{Dict}(undef, N)
-	solutions[1:M],LU = solve(t₀,Δt,M,problem)
+	solutions[1:M],LU,mat = solve(t₀,Δt,M,problem)
 
-	mat = hcat([solutions[i][:x] for i ∈ 1:M]...)
 	t₀=solutions[M][:time]
+	
+	A = spzeros(problem.internal^2,problem.internal^2)
+	rhs = zeros(problem.internal^2)
+	basis = zeros(problem.internal^2,m)
 
 	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1-M)*Δt)))
 	for (i,time) ∈ iter
-		A, rhs = updateLinearSystem(problem, time)
+		updateLinearSystem!(A,rhs,problem, time)
 		ILUZero.ilu0!(LU,A)
 
-		basis=reductionMethod(mat[InvertedIndices.Not(problem.edge),1:end],M,m)
-		AQ = A * basis
+		reductionMethod(basis,mat,M,m)
+		# AQ = A * basis
 
-		IG_small = qr(AQ) \ (rhs) #Go through QR + preconditioner
-		IG = basis * IG_small
-
-		run_gmres!(IG,A,rhs,iter,solutions,problem,i+M,time,LU)
-
-		mat=cat(mat,solutions[i+M][:x]; dims=2)
+		# IG_small = qr(AQ) \ (rhs) #Go through QR + preconditioner
+		# IG = basis * IG_small
+		IG = generate_guess(A,basis,rhs)
+		sol=run_gmres!(IG,A,rhs,iter,solutions,problem,i+M,time,LU)
+		
+		#mat=cat(mat,sol; dims=2)
+		mat=circshift(mat,(0,1))
+		mat[:,end] = sol
 	end
 
 	return solutions
+end
+
+function generate_guess(A,basis,rhs)
+	AQ = A * basis
+
+	IG_small = qr(AQ) \ (rhs) 
+	IG = basis * IG_small
+
+	return IG
 end
 
 function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, precond;use_guess=true)
@@ -71,4 +90,5 @@ function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, prec
 	full_sol[InvertedIndices.Not(problem.edge)] .= sol
 
 	solutions[index] = Dict(:x => full_sol, :history => history, :time => time, :residual => res, :IG => sv)
+	return sol
 end
