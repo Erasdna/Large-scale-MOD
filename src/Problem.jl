@@ -14,6 +14,7 @@ struct DifferentialOperators2D
 	∂y::SparseMatrixCSC
 	∂²x::SparseMatrixCSC
 	∂²y::SparseMatrixCSC
+	Δ::SparseMatrixCSC
 	function DifferentialOperators2D(N::Int64, hx::Float64, hy::Float64)
 		#Fourth order discretisation
 
@@ -34,10 +35,13 @@ struct DifferentialOperators2D
 
 		id = sparse(I, N, N)
 
+		Dxx = kron(id, DD) ./ (12 * hx^2)
+		Dyy = kron(DD, id) ./ (12 * hy^2)
 		new(kron(id, D) ./ (12 * hx), # ∂x operator
 			kron(D, id) ./ (12 * hy), # ∂y operator
-			kron(id, DD) ./ (12 * hx^2), # ∂²x operator
-			kron(DD, id) ./ (12 * hy^2), # ∂²y operator
+			Dxx, # ∂²x operator
+			Dyy, # ∂²y operator
+			Dxx + Dyy, # Laplacian operator (should save some calculations when updating linear system)
 		)
 	end
 

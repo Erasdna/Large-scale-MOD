@@ -17,7 +17,8 @@ function updateLinearSystem!(A::SparseMatrixCSC, rhs::AbstractVector, problem::E
     ∂a∂x = getindex.(val,1)
     ∂a∂y = getindex.(val,2)
 
-    A .= a' .* (problem.∂D.∂²x + problem.∂D.∂²y) +  (∂a∂x .* problem.∂D.∂x + ∂a∂y .* problem.∂D.∂y)
+    A .= a' .* problem.∂D.Δ + (∂a∂x .* problem.∂D.∂x + ∂a∂y .* problem.∂D.∂y)
+
     rhs_func(x) = problem.rhs(x,time)
     rhs .= map(rhs_func,inner_grid);
 end

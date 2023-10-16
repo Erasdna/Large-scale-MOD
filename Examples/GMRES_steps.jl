@@ -59,16 +59,16 @@ steps = 1:200
 
 #Δt = 10⁻³
 sol_base_3,_ = LSMOD.solve(2.3, 1e-3, N, prob)
-sol_POD_3 = LSMOD.solve(2.3, 1e-3, N, prob, 20,10,LSMOD.POD!)
-sol_Rand_3 = LSMOD.solve(2.3, 1e-3, N, prob, 20,10,LSMOD.RandomizedQR!)
+sol_POD_3 = LSMOD.solve(2.3, 1e-3, N, prob, 35,20,LSMOD.POD!)
+sol_Rand_3 = LSMOD.solve(2.3, 1e-3, N, prob, 35,20,LSMOD.RandomizedQR!)
 
-extract_iters(v) = [v[el][:history].niter for el in eachindex(v)]
+extract_iters(v) = [v[el][:history].niter for el in range(2,length(v))]
 l1 = extract_iters(sol_base_3)
 l2 = extract_iters(sol_POD_3)
 l3 = extract_iters(sol_Rand_3)
 fig1 = scatter(steps, 
             [l1,l2,l3], 
-            title = "Δt = 10⁻³, M=20, m=10", 
+            title = "Δt = 10⁻³, M=35, m=20", 
             label= ["Base" "POD" "Randomized QR"], 
             lw=2,
             xlabel="Timestep",
@@ -77,8 +77,8 @@ Plots.savefig("Figures/10_3_with_precond.png")
 
 #Δt = 10⁻⁵
 sol_base_5,_ = LSMOD.solve(2.3, 1e-5, N, prob)
-sol_POD_5 = LSMOD.solve(2.3, 1e-5, N, prob, 35,20,LSMOD.POD!)
-sol_Rand_5 = LSMOD.solve(2.3, 1e-5, N, prob, 35,20,LSMOD.RandomizedQR!)
+sol_POD_5 = LSMOD.solve(2.3, 1e-5, N, prob, 20,10,LSMOD.POD!)
+sol_Rand_5 = LSMOD.solve(2.3, 1e-5, N, prob, 20,10,LSMOD.RandomizedQR!)
 
 l1_2 = extract_iters(sol_base_5)
 l2_2 = extract_iters(sol_POD_5)
@@ -86,7 +86,7 @@ l3_2 = extract_iters(sol_Rand_5)
 
 fig2 = scatter(steps, 
             [l1_2,l2_2,l3_2], 
-            title = "Δt = 10⁻⁵, M=35, m=20", 
+            title = "Δt = 10⁻⁵, M=20, m=10", 
             label= ["Base" "POD" "Randomized QR"], 
             xlabel="Timestep",
             ylabel="GMRES iterations")

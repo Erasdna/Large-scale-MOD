@@ -2,16 +2,17 @@ export POD!, RandomizedQR!
 
 function POD!(basis,solutions, M, m)
 	dims = size(solutions)
-	@assert(dims[2] >= M)
+	@assert(dims[2] == M)
 
-	mat = @view solutions[:, end-M+1:end]
-	F = svd(mat)
-	basis .= @view (F.U)[:, 1:m]
+	#mat = @view solutions[:, end-M+1:end]
+
+	F = svd(solutions)
+	basis .= (F.U)[:, 1:m]
 end
 
 function RandomizedQR!(basis,solutions, M, m)
 	dims = size(solutions)
-	@assert(dims[2] >= M)
+	@assert(dims[2] == M)
 
 	mat = @view solutions[:, end-M+1:end]
 
