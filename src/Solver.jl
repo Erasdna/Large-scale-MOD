@@ -31,30 +31,39 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 	return solutions,LU,mat
 end
 
-function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, M::Integer, m::Integer, reductionMethod)
+function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::Strategy; projection_error=false)
 	solutions = Array{Dict}(undef, N)
-	solutions[1:M],LU,mat = solve(t₀,Δt,M,problem)
+	solutions[1:strategy.M],LU,mat = solve(t₀,Δt,strategy.M,problem)
+	strategy.solutions=mat # Need more general strategy!
 
-	t₀=solutions[M][:time]
+	t₀=solutions[strategy.M][:time]
 	
 	A = spzeros(problem.internal^2,problem.internal^2)
 	rhs = zeros(problem.internal^2)
-	basis = zeros(problem.internal^2,m)
 
-	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1-M)*Δt)))
+	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1-strategy.M)*Δt)))
 	for (i,time) ∈ iter
 		updateLinearSystem!(A,rhs,problem, time)
 		preconditioner_time = @elapsed ILUZero.ilu0!(LU,A)
 
-		basis_time = @elapsed reductionMethod(basis,mat,M,m)
+		basis_time = @elapsed orderReduction!(strategy)
 		
 		#ProgressBars.println(iter," ||(I - QQᵀ)X||₂ ", norm((I(problem.internal^2) - basis * basis' )*mat))
-		guess_time = @elapsed IG,guess_timing = generate_guess(A,basis,rhs)
-		sol,GMRES_time =run_gmres!(IG,A,rhs,iter,solutions,problem,i+M,time,LU)
+		guess_time = @elapsed IG,guess_timing = generate_guess(A,strategy.basis,rhs)
+		sol,GMRES_time =run_gmres!(IG,A,rhs,iter,solutions,problem,i+strategy.M,time,LU)
 		
-		mat=circshift(mat,(0,-1))
-		mat[:,end] .= copy(sol)
-		solutions[i+M][:timing] = Dict(:preconditioner => preconditioner_time, :gmres => GMRES_time, :basis => basis_time, :guess => guess_time, :guess_detailed => guess_timing)
+		if projection_error
+			solutions[i+strategy.M][:proj] = norm(sol - strategy.basis*strategy.basis' * sol)
+			Ff = qr(strategy.solutions)
+			Qq = Matrix(F.Q)
+			solutions[i+strategy.M][:proj_X] = norm(sol - Qq*Qq' * sol)
+		end
+
+		cycle_and_replace!(strategy.solutions,sol)
+		# strategy.solutions=circshift(strategy.solutions,(0,-1))
+		# strategy.solutions[:,end] .= copy(sol)
+
+		solutions[i+strategy.M][:timing] = Dict(:preconditioner => preconditioner_time, :gmres => GMRES_time, :basis => basis_time, :guess => guess_time, :guess_detailed => guess_timing)
 	end
 
 	return solutions
@@ -63,8 +72,9 @@ end
 function generate_guess(A,basis,rhs)
 	AQ_time = @elapsed AQ = A * basis
 
-	LS_time = @elapsed IG_small = qr(AQ) \ (rhs) 
-	IG_time = @elapsed IG = basis * IG_small
+	IG_small=copy(rhs)
+	LS_time = @elapsed _,ig,_=LAPACK.gels!('N',AQ,IG_small) 
+	IG_time = @elapsed IG = basis * ig
 
 	timing = Dict(:AQ => AQ_time, :LS => LS_time, :IG => IG_time)
 	return IG,timing
@@ -74,11 +84,11 @@ function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, prec
 	if use_guess
 		r0 = norm(rhs - A*initial_guess)
 		sv = copy(initial_guess)
-		GMRES_time = @elapsed sol, history = Krylov.gmres(A, rhs, initial_guess; N=precond, ldiv=true, atol=1e-8*norm(rhs))
+		GMRES_time = @elapsed sol, history = Krylov.gmres(A, rhs, initial_guess; ldiv=true, atol=1e-7*norm(rhs))
 	else
 		r0=0
 		sv = nothing
-		GMRES_time = @elapsed sol, history = Krylov.gmres(A, rhs; N=precond, ldiv=true, atol=1e-8*norm(rhs))
+		GMRES_time = @elapsed sol, history = Krylov.gmres(A, rhs; ldiv=true, atol=1e-7*norm(rhs))
 	end
 	res = norm(rhs - A*sol)
 	ProgressBars.set_postfix(iter, Iterations=Printf.@sprintf("%d",history.niter), r₀=Printf.@sprintf("%4.3e",r0/norm(rhs)), rₙ=Printf.@sprintf("%4.3e",res/norm(rhs)))

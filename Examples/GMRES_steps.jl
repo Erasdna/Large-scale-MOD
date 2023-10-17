@@ -58,36 +58,58 @@ N=200
 steps = 1:200
 
 #Δt = 10⁻³
-sol_base_3,_ = LSMOD.solve(2.3, 1e-3, N, prob)
-sol_POD_3 = LSMOD.solve(2.3, 1e-3, N, prob, 35,20,LSMOD.POD!)
-sol_Rand_3 = LSMOD.solve(2.3, 1e-3, N, prob, 35,20,LSMOD.RandomizedQR!)
+M_3=35
+m_3=20
+Δt_3 = 1e-3
+
+sol_base_3,_ = LSMOD.solve(2.3, Δt_3 , N, prob)
+pod = LSMOD.POD(prob.internal^2,M_3,m_3)
+sol_POD_3 = LSMOD.solve(2.3, Δt_3 , N, prob, pod)
+RQR=LSMOD.RandomizedQR(prob.internal^2,M_3,m_3)
+sol_Rand_3 = LSMOD.solve(2.3, Δt_3 , N, prob, RQR)
+RSVD=LSMOD.RandomizedSVD(prob.internal^2,M_3,m_3)
+sol_RandSVD_3 = LSMOD.solve(2.3, Δt_3 , N, prob, RSVD)
+
 
 extract_iters(v) = [v[el][:history].niter for el in range(2,length(v))]
 l1 = extract_iters(sol_base_3)
 l2 = extract_iters(sol_POD_3)
 l3 = extract_iters(sol_Rand_3)
+l4 = extract_iters(sol_RandSVD_3)
+
 fig1 = scatter(steps, 
-            [l1,l2,l3], 
+            [l1,l2,l3,l4], 
             title = "Δt = 10⁻³, M=35, m=20", 
-            label= ["Base" "POD" "Randomized QR"], 
+            label= ["Base" "POD" "Randomized QR" "Randomized SVD"], 
             lw=2,
             xlabel="Timestep",
             ylabel="GMRES iterations")
-Plots.savefig("Figures/10_3_with_precond.png")
+Plots.savefig("Figures/10_3_with_precond_opt.png")
 
 #Δt = 10⁻⁵
-sol_base_5,_ = LSMOD.solve(2.3, 1e-5, N, prob)
-sol_POD_5 = LSMOD.solve(2.3, 1e-5, N, prob, 20,10,LSMOD.POD!)
-sol_Rand_5 = LSMOD.solve(2.3, 1e-5, N, prob, 20,10,LSMOD.RandomizedQR!)
+M_5=20
+m_5=10
+Δt_5 = 1e-5
+
+sol_base_5,_ = LSMOD.solve(2.3, Δt_5 , N, prob)
+pod_2 = LSMOD.POD(prob.internal^2,M_5,m_5)
+sol_POD_5 = LSMOD.solve(2.3, Δt_5 , N, prob, pod_2)
+RQR_2 =LSMOD.RandomizedQR(prob.internal^2,M_5,m_5)
+sol_Rand_5 = LSMOD.solve(2.3, Δt_5 , N, prob, RQR_2)
+RSVD_2 =LSMOD.RandomizedSVD(prob.internal^2,M_5,m_5)
+sol_RandSVD_5 = LSMOD.solve(2.3, Δt_5 , N, prob, RSVD_2)
+
 
 l1_2 = extract_iters(sol_base_5)
 l2_2 = extract_iters(sol_POD_5)
 l3_2 = extract_iters(sol_Rand_5)
+l4_2 = extract_iters(sol_RandSVD_5)
+
 
 fig2 = scatter(steps, 
-            [l1_2,l2_2,l3_2], 
+            [l1_2,l2_2,l3_2, l4_2], 
             title = "Δt = 10⁻⁵, M=20, m=10", 
-            label= ["Base" "POD" "Randomized QR"], 
+            label= ["Base" "POD" "Randomized QR" "Randomized SVD"], 
             xlabel="Timestep",
             ylabel="GMRES iterations")
-Plots.savefig("Figures/10_5_with_precond.png")
+Plots.savefig("Figures/10_5_with_precond_opt.png")

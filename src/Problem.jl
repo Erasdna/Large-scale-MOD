@@ -6,7 +6,7 @@ export DifferentialOperators2D
 abstract type DifferentialOperators end
 abstract type Problem end
 
-struct DifferentialOperators2D
+struct DifferentialOperators2D <: DifferentialOperators
 	"""
 		2D differential operators
 	"""

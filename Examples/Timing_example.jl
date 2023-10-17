@@ -35,7 +35,7 @@ function solver_time(data,M::Integer, title::String)
             label= ["Initial guess" "GMRES"], 
             lw=2,
             xlabel="Timestep",
-            ylabel="Time per iteration [s]")
+            ylabel="Cumulative time [s]")
     return fig1,fig2
 end
 
@@ -49,7 +49,13 @@ function method_comp(base,method1, tag1::String, method2, tag2::String,M)
             lw=2,
             xlabel="Timestep",
             ylabel="Time [s]")
-    return fig1
+    fig2 = scatter(M:M+length(b[1]), 
+            [cumsum(b[end] + b[end-1]),cumsum(m1[end] + m1[end-1]),cumsum(m2[end] + m2[end-1])], 
+            label= ["base" tag1 tag2], 
+            lw=2,
+            xlabel="Timestep",
+            ylabel="Time [s]")
+    return fig1,fig2
 end
 
 function reduced_time(data,M::Integer, title::String)
@@ -119,11 +125,15 @@ prob = LSMOD.EllipticPDE(
 
 N=200
 steps = 1:200
+M_3=35
+m_3=20
 
 #Δt = 10⁻³
-sol_base_3,_ = LSMOD.solve(2.3, 1e-3, N, prob)
-sol_POD_3 = LSMOD.solve(2.3, 1e-3, N, prob, 35,20,LSMOD.POD!)
-sol_Rand_3 = LSMOD.solve(2.3, 1e-3, N, prob, 35,20,LSMOD.RandomizedQR!)
+sol_base_3,_ = LSMOD.solve(2.3, 1e-5, N, prob)
+pod = LSMOD.POD(prob.internal^2,M_3,m_3)
+sol_POD_3 = LSMOD.solve(2.3, 1e-5, N, prob, pod)
+RQR=LSMOD.RandomizedQR(prob.internal^2,M_3,m_3)
+sol_Rand_3 = LSMOD.solve(2.3, 1e-5, N, prob, RQR)
 
 start = 40 
 base1,base2 = solver_time(sol_base_3,start,"base")
@@ -144,5 +154,6 @@ savefig(Randomized2, "Figures/Timing/Randomized2.png")
 Randomized3 = reduced_time(sol_Rand_3,start,"Randomized QR")
 savefig(Randomized3, "Figures/Timing/Randomized3.png")
 
-f3 = method_comp(sol_base_3,sol_POD_3,"POD",sol_Rand_3,"Randomized",start)
+f3,f4 = method_comp(sol_base_3,sol_POD_3,"POD",sol_Rand_3,"Randomized",start)
 savefig(f3, "Figures/Timing/comp.png")
+savefig(f4, "Figures/Timing/Cumulative_comp.png")
