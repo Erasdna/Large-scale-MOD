@@ -120,20 +120,22 @@ prob = LSMOD.EllipticPDE(
             - GMRES without restarting
             - Tolerance: ||Ax - b||₂/||b||₂ ≤ 10⁻⁷
             - Incomplete LU preconditioner with no fill in
-            - Fourth order discretisation scheme in time
+            - Fourth order discretisation scheme in space
 """
 
 N=200
 steps = 1:200
 M_3=35
 m_3=20
+t₀=0.0
+Δt=1e-3
 
 #Δt = 10⁻³
-sol_base_3,_ = LSMOD.solve(2.3, 1e-5, N, prob)
+sol_base_3,_ = LSMOD.solve(t₀, Δt, N, prob)
 pod = LSMOD.POD(prob.internal^2,M_3,m_3)
-sol_POD_3 = LSMOD.solve(2.3, 1e-5, N, prob, pod)
+sol_POD_3 = LSMOD.solve(t₀, Δt, N, prob, pod)
 RQR=LSMOD.RandomizedQR(prob.internal^2,M_3,m_3)
-sol_Rand_3 = LSMOD.solve(2.3, 1e-5, N, prob, RQR)
+sol_Rand_3 = LSMOD.solve(t₀, Δt, N, prob, RQR)
 
 start = 40 
 base1,base2 = solver_time(sol_base_3,start,"base")

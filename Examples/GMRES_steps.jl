@@ -1,4 +1,4 @@
-using LinearAlgebra,ForwardDiff, Revise, Plots, InvertedIndices
+using LinearAlgebra,ForwardDiff, Revise, Plots, InvertedIndices, LaTeXStrings
 include("../src/LSMOD.jl")
 using .LSMOD
 
@@ -61,43 +61,77 @@ steps = 1:200
 M_3=35
 m_3=20
 Δt_3 = 1e-3
+t₀=0.0
 
-sol_base_3,_ = LSMOD.solve(2.3, Δt_3 , N, prob)
+sol_base_3,_ = LSMOD.solve(t₀, Δt_3 , N, prob)
 pod = LSMOD.POD(prob.internal^2,M_3,m_3)
-sol_POD_3 = LSMOD.solve(2.3, Δt_3 , N, prob, pod)
+sol_POD_3 = LSMOD.solve(t₀, Δt_3 , N, prob, pod; projection_error=true)
 RQR=LSMOD.RandomizedQR(prob.internal^2,M_3,m_3)
-sol_Rand_3 = LSMOD.solve(2.3, Δt_3 , N, prob, RQR)
+sol_Rand_3 = LSMOD.solve(t₀, Δt_3 , N, prob, RQR; projection_error=true)
 RSVD=LSMOD.RandomizedSVD(prob.internal^2,M_3,m_3)
-sol_RandSVD_3 = LSMOD.solve(2.3, Δt_3 , N, prob, RSVD)
+sol_RandSVD_3 = LSMOD.solve(t₀, Δt_3 , N, prob, RSVD; projection_error=true)
 
 
-extract_iters(v) = [v[el][:history].niter for el in range(2,length(v))]
+extract_iters(v) = [v[el][:history].niter for el in range(M_3+1,length(v))]
 l1 = extract_iters(sol_base_3)
 l2 = extract_iters(sol_POD_3)
 l3 = extract_iters(sol_Rand_3)
 l4 = extract_iters(sol_RandSVD_3)
 
-fig1 = scatter(steps, 
+extract_proj(v) = [v[el][:proj] for el in range(M_3+1,length(v))]
+extract_proj_X(v) = [v[el][:proj_X] for el in range(M_3+1,length(v))]
+extract_r0(v) = [v[el][:r0] for el in range(M_3+1,length(v))]
+
+
+fig1 = scatter(range(2,N), 
             [l1,l2,l3,l4], 
-            title = "Δt = 10⁻³, M=35, m=20", 
+            title = L"Δt = 10^{-3}, M=35, m=20", 
             label= ["Base" "POD" "Randomized QR" "Randomized SVD"], 
             lw=2,
+            xlabel=L"Timestep",
+            ylabel=L"GMRES iterations")
+Plots.savefig(fig1,"Figures/10_3_with_precond_opt.png")
+
+proj_X = extract_proj_X(sol_POD_3)
+l2_proj = extract_proj(sol_POD_3)
+l3_proj = extract_proj(sol_Rand_3)
+l4_proj = extract_proj(sol_RandSVD_3)
+
+fig3 = scatter(range(M_3+1,N), 
+            [proj_X,l2_proj,l3_proj,l4_proj], 
+            title = L"Δt = 10^{-3}, M=35, m=20", 
+            label= ["QR(X)" "POD" "Randomized QR" "Randomized SVD"], 
+            lw=2,
             xlabel="Timestep",
-            ylabel="GMRES iterations")
-Plots.savefig("Figures/10_3_with_precond_opt.png")
+            ylabel=L"||(I-QQ^T)X||")
+Plots.savefig(fig3,"Figures/projection_error.png")
+
+l1_r0 = extract_r0(sol_base_3)
+l2_r0 = extract_r0(sol_POD_3)
+l3_r0 = extract_r0(sol_Rand_3)
+l4_r0 = extract_r0(sol_RandSVD_3)
+
+fig4 = scatter([l2,l3,l4], 
+            [l2_r0,l3_r0,l4_r0], 
+            title = L"Δt = 10^{-3}, M=35, m=20", 
+            label= ["POD" "Randomized QR" "Randomized SVD"], 
+            lw=2,
+            xlabel="GMRES iterations",
+            ylabel=L"||r_0||/||b||")
+Plots.savefig(fig4,"Figures/r0_vs_it.png")
 
 #Δt = 10⁻⁵
 M_5=20
 m_5=10
 Δt_5 = 1e-5
 
-sol_base_5,_ = LSMOD.solve(2.3, Δt_5 , N, prob)
+sol_base_5,_ = LSMOD.solve(t₀, Δt_5 , N, prob)
 pod_2 = LSMOD.POD(prob.internal^2,M_5,m_5)
-sol_POD_5 = LSMOD.solve(2.3, Δt_5 , N, prob, pod_2)
+sol_POD_5 = LSMOD.solve(t₀, Δt_5 , N, prob, pod_2)
 RQR_2 =LSMOD.RandomizedQR(prob.internal^2,M_5,m_5)
-sol_Rand_5 = LSMOD.solve(2.3, Δt_5 , N, prob, RQR_2)
+sol_Rand_5 = LSMOD.solve(t₀, Δt_5 , N, prob, RQR_2)
 RSVD_2 =LSMOD.RandomizedSVD(prob.internal^2,M_5,m_5)
-sol_RandSVD_5 = LSMOD.solve(2.3, Δt_5 , N, prob, RSVD_2)
+sol_RandSVD_5 = LSMOD.solve(t₀, Δt_5 , N, prob, RSVD_2)
 
 
 l1_2 = extract_iters(sol_base_5)
@@ -108,7 +142,7 @@ l4_2 = extract_iters(sol_RandSVD_5)
 
 fig2 = scatter(steps, 
             [l1_2,l2_2,l3_2, l4_2], 
-            title = "Δt = 10⁻⁵, M=20, m=10", 
+            title = L"Δt = 10^{-5}, M=20, m=10", 
             label= ["Base" "POD" "Randomized QR" "Randomized SVD"], 
             xlabel="Timestep",
             ylabel="GMRES iterations")

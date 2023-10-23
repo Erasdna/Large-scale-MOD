@@ -1,4 +1,4 @@
-import ProgressBars, Printf, Krylov, InvertedIndices, ILUZero
+import ProgressBars, Printf, Krylov, InvertedIndices, ILUZero, IterativeSolvers
 include("ReductionStrategies.jl")
 
 function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
@@ -23,8 +23,8 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 		else
 			sol,GMRES_time=run_gmres!(prevsol,A,rhs,iter,solutions,problem,i,time,LU)
 		end
-		mat[:,i] .= copy(sol)
-		prevsol = copy(sol)
+		mat[:,i] .= sol
+		prevsol = sol
 		solutions[i][:timing] = Dict(:preconditioner => preconditioner_time, :gmres => GMRES_time)
 	end
 
@@ -34,7 +34,7 @@ end
 function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::Strategy; projection_error=false)
 	solutions = Array{Dict}(undef, N)
 	solutions[1:strategy.M],LU,mat = solve(t₀,Δt,strategy.M,problem)
-	strategy.solutions=mat # Need more general strategy!
+	strategy.solutions .= mat # Need more general strategy!
 
 	t₀=solutions[strategy.M][:time]
 	
@@ -53,15 +53,16 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 		sol,GMRES_time =run_gmres!(IG,A,rhs,iter,solutions,problem,i+strategy.M,time,LU)
 		
 		if projection_error
-			solutions[i+strategy.M][:proj] = norm(sol - strategy.basis*strategy.basis' * sol)
+			#ProgressBars.println(iter,norm(strategy.solutions - strategy.basis*strategy.basis' * strategy.solutions)/norm(strategy.solutions))
+			solutions[i+strategy.M][:proj] = norm(strategy.solutions - strategy.basis*strategy.basis' * strategy.solutions)/norm(strategy.solutions)
 			Ff = qr(strategy.solutions)
-			Qq = Matrix(F.Q)
-			solutions[i+strategy.M][:proj_X] = norm(sol - Qq*Qq' * sol)
+			Qq = Matrix(Ff.Q)
+			solutions[i+strategy.M][:proj_X] = norm(strategy.solutions - Qq*Qq' * strategy.solutions)/norm(strategy.solutions)
 		end
 
-		cycle_and_replace!(strategy.solutions,sol)
-		# strategy.solutions=circshift(strategy.solutions,(0,-1))
-		# strategy.solutions[:,end] .= copy(sol)
+		#cycle_and_replace!(strategy.solutions,sol)
+		strategy.solutions .= circshift(strategy.solutions,(0,-1))
+		strategy.solutions[:,end] .= sol
 
 		solutions[i+strategy.M][:timing] = Dict(:preconditioner => preconditioner_time, :gmres => GMRES_time, :basis => basis_time, :guess => guess_time, :guess_detailed => guess_timing)
 	end
@@ -84,11 +85,11 @@ function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, prec
 	if use_guess
 		r0 = norm(rhs - A*initial_guess)
 		sv = copy(initial_guess)
-		GMRES_time = @elapsed sol, history = Krylov.gmres(A, rhs, initial_guess; ldiv=true, atol=1e-7*norm(rhs))
+		GMRES_time = @elapsed sol, history = Krylov.gmres(A, rhs, initial_guess; N=precond, ldiv=true, atol=1e-7*norm(rhs))
 	else
 		r0=0
 		sv = nothing
-		GMRES_time = @elapsed sol, history = Krylov.gmres(A, rhs; ldiv=true, atol=1e-7*norm(rhs))
+		GMRES_time = @elapsed sol, history = Krylov.gmres(A, rhs; N=precond, ldiv=true, atol=1e-7*norm(rhs))
 	end
 	res = norm(rhs - A*sol)
 	ProgressBars.set_postfix(iter, Iterations=Printf.@sprintf("%d",history.niter), r₀=Printf.@sprintf("%4.3e",r0/norm(rhs)), rₙ=Printf.@sprintf("%4.3e",res/norm(rhs)))
@@ -97,6 +98,6 @@ function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, prec
 	full_sol = zeros((problem.internal+2)^2)
 	full_sol[InvertedIndices.Not(problem.edge)] .= sol
 
-	solutions[index] = Dict(:x => full_sol, :history => history, :time => time, :residual => res, :IG => sv)
+	solutions[index] = Dict(:x => full_sol, :history => history, :time => time, :residual => res, :IG => sv, :r0 => r0/norm(rhs))
 	return sol, GMRES_time
 end
