@@ -4,8 +4,9 @@ using LinearAlgebra, SparseArrays, Base.Iterators, ForwardDiff, TimerOutputs, MK
 
 include("utils.jl")
 include("Problem.jl")
+include("ReductionStrategies.jl")
 include("Solver.jl")
 include("LinearSystem.jl")
-include("ReductionStrategies.jl")
+include("Example_problems.jl")
 
 end

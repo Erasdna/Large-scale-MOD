@@ -1,5 +1,4 @@
 import ProgressBars, Printf, Krylov, InvertedIndices, ILUZero, IterativeSolvers
-include("ReductionStrategies.jl")
 
 function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 	"""

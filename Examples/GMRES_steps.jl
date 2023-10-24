@@ -1,43 +1,6 @@
-using LinearAlgebra,ForwardDiff, Revise, Plots, InvertedIndices, LaTeXStrings
+using LinearAlgebra,ForwardDiff, Revise, Plots, InvertedIndices, LaTeXStrings, BenchmarkTools
 include("../src/LSMOD.jl")
 using .LSMOD
-
-"""
-    We consider the following problem:
-        ∇⋅(a(x,y,t)∇f(x,y,t)) = rhs(x,y,t) ∀(x,y) ∈ Ω
-        f(x,y,t)=0 ∀(x,y) ∈ ∂Ω
-    With Ω ⊂ [0,1]²
-"""
-#Wave speed
-a(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
-a(x::Tuple, t) = a([x...],t)
-
-#Exact solution
-exact(x::Vector, t) = sin(4*pi*x[1])*sin(4*pi*x[2])*(1 + sin(15*pi*x[1]*t)*sin(3*pi*x[2]*t)*exp(-(x[1]-0.5)^2 - (x[2]-0.5)^2 - 0.25^2)) 
-exact(x::Tuple, t) = exact([x...],t) 
-
-#We calculate the rhs function using automatic differentiation
-function rhs(x::Tuple,t,a,exact)
-    frozen_a(y::Vector) = a(y,t)
-    frozen_exact(y::Vector) = exact(y,t)
-    
-    x_vec = [x...]
-    d1 = ForwardDiff.gradient(frozen_a,x_vec)' * ForwardDiff.gradient(frozen_exact,x_vec)
-    d2 = frozen_a(x_vec) * tr(ForwardDiff.hessian(frozen_exact,x_vec))
-    return d1 + d2
-end
-
-g(x::Tuple,t) = rhs(x,t,a,exact)
-
-prob = LSMOD.EllipticPDE(
-	100, # discretisation (each direction)
-	0.0, # xmin
-	1.0, # xmax
-	0.0, # ymin
-	1.0, # ymax
-	a, # wave speed (~ish)
-	g, # rhs
-)
 
 """
     We reproduce Figure 1 in [cite paper]
@@ -63,7 +26,11 @@ m_3=20
 Δt_3 = 1e-3
 t₀=0.0
 
+prob = LSMOD.Example1.prob
+
 sol_base_3,_ = LSMOD.solve(t₀, Δt_3 , N, prob)
+RandNYS = LSMOD.Nystrom(prob.internal^2,M_3,14,7)
+sol_RNYS_3 = LSMOD.solve(t₀, Δt_3 , N, prob, RandNYS; projection_error=true)
 pod = LSMOD.POD(prob.internal^2,M_3,m_3)
 sol_POD_3 = LSMOD.solve(t₀, Δt_3 , N, prob, pod; projection_error=true)
 RQR=LSMOD.RandomizedQR(prob.internal^2,M_3,m_3)
@@ -77,6 +44,7 @@ l1 = extract_iters(sol_base_3)
 l2 = extract_iters(sol_POD_3)
 l3 = extract_iters(sol_Rand_3)
 l4 = extract_iters(sol_RandSVD_3)
+l5 = extract_iters(sol_RNYS_3)
 
 extract_proj(v) = [v[el][:proj] for el in range(M_3+1,length(v))]
 extract_proj_X(v) = [v[el][:proj_X] for el in range(M_3+1,length(v))]
@@ -84,23 +52,25 @@ extract_r0(v) = [v[el][:r0] for el in range(M_3+1,length(v))]
 
 
 fig1 = scatter(range(2,N), 
-            [l1,l2,l3,l4], 
+            [l1,l2,l3,l4,l5], 
             title = L"Δt = 10^{-3}, M=35, m=20", 
-            label= ["Base" "POD" "Randomized QR" "Randomized SVD"], 
+            label= ["Base" "POD" "Randomized QR" "Randomized SVD" "Nystrom"], 
             lw=2,
-            xlabel=L"Timestep",
-            ylabel=L"GMRES iterations")
+            xlabel="Timestep",
+            ylabel="GMRES iterations")
 Plots.savefig(fig1,"Figures/10_3_with_precond_opt.png")
 
 proj_X = extract_proj_X(sol_POD_3)
 l2_proj = extract_proj(sol_POD_3)
 l3_proj = extract_proj(sol_Rand_3)
 l4_proj = extract_proj(sol_RandSVD_3)
+l5_proj = extract_proj(sol_RNYS_3)
+
 
 fig3 = scatter(range(M_3+1,N), 
-            [proj_X,l2_proj,l3_proj,l4_proj], 
+            [proj_X,l2_proj,l3_proj,l4_proj,l5_proj], 
             title = L"Δt = 10^{-3}, M=35, m=20", 
-            label= ["QR(X)" "POD" "Randomized QR" "Randomized SVD"], 
+            label= ["QR(X)" "POD" "Randomized QR" "Randomized SVD" "Nystrom"], 
             lw=2,
             xlabel="Timestep",
             ylabel=L"||(I-QQ^T)X||")

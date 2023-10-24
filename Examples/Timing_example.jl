@@ -39,22 +39,25 @@ function solver_time(data,M::Integer, title::String)
     return fig1,fig2
 end
 
-function method_comp(base,method1, tag1::String, method2, tag2::String,M)
+function method_comp(base,method1, tag1::String, method2, tag2::String, method3,tag3,method4,tag4,M)
     b = extract_timing(base,M)
     m1 = extract_timing(method1,M)
     m2 = extract_timing(method2,M)
+    m3 = extract_timing(method3,M)
+    m4 = extract_timing(method4,M)
     fig1 = scatter(M:M+length(b[1]), 
-            [b[end] + b[end-1],m1[end] + m1[end-1],m2[end] + m2[end-1]], 
-            label= ["base" tag1 tag2], 
+            [b[end] + b[end-1],m1[end] + m1[end-1],m2[end] + m2[end-1],m3[end] + m3[end-1],m4[end] + m4[end-1]], 
+            label= ["base" tag1 tag2 tag3 tag4], 
             lw=2,
             xlabel="Timestep",
             ylabel="Time [s]")
+    bb=cumsum(b[end] + b[end-1])
     fig2 = scatter(M:M+length(b[1]), 
-            [cumsum(b[end] + b[end-1]),cumsum(m1[end] + m1[end-1]),cumsum(m2[end] + m2[end-1])], 
-            label= ["base" tag1 tag2], 
+            [bb./cumsum(m1[end] + m1[end-1]),bb./cumsum(m2[end] + m2[end-1]),bb./cumsum(m3[end] + m3[end-1]),bb./cumsum(m4[end] + m4[end-1])], 
+            label= [tag1 tag2 tag3 tag4], 
             lw=2,
             xlabel="Timestep",
-            ylabel="Time [s]")
+            ylabel="Speedup")
     return fig1,fig2
 end
 
@@ -71,42 +74,6 @@ function reduced_time(data,M::Integer, title::String)
             ylabel="Time [s]")
     return fig1
 end
-"""
-    We consider the following problem:
-        ∇⋅(a(x,y,t)∇f(x,y,t)) = rhs(x,y,t) ∀(x,y) ∈ Ω
-        f(x,y,t)=0 ∀(x,y) ∈ ∂Ω
-    With Ω ⊂ [0,1]²
-"""
-#Wave speed
-a(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
-a(x::Tuple, t) = a([x...],t)
-
-#Exact solution
-exact(x::Vector, t) = sin(4*pi*x[1])*sin(4*pi*x[2])*(1 + sin(15*pi*x[1]*t)*sin(3*pi*x[2]*t)*exp(-(x[1]-0.5)^2 - (x[2]-0.5)^2 - 0.25^2)) 
-exact(x::Tuple, t) = exact([x...],t) 
-
-#We calculate the rhs function using automatic differentiation
-function rhs(x::Tuple,t,a,exact)
-    frozen_a(y::Vector) = a(y,t)
-    frozen_exact(y::Vector) = exact(y,t)
-    
-    x_vec = [x...]
-    d1 = ForwardDiff.gradient(frozen_a,x_vec)' * ForwardDiff.gradient(frozen_exact,x_vec)
-    d2 = frozen_a(x_vec) * tr(ForwardDiff.hessian(frozen_exact,x_vec))
-    return d1 + d2
-end
-
-g(x::Tuple,t) = rhs(x,t,a,exact)
-
-prob = LSMOD.EllipticPDE(
-	100, # discretisation (each direction)
-	0.0, # xmin
-	1.0, # xmax
-	0.0, # ymin
-	1.0, # ymax
-	a, # wave speed (~ish)
-	g, # rhs
-)
 
 """
     We reproduce Figure 1 in [cite paper]
@@ -130,32 +97,38 @@ m_3=20
 t₀=0.0
 Δt=1e-3
 
+prob = LSMOD.Example1.prob
 #Δt = 10⁻³
 sol_base_3,_ = LSMOD.solve(t₀, Δt, N, prob)
+RandNYS = LSMOD.Nystrom(prob.internal^2,M_3,14,7)
+sol_RNYS_3 = LSMOD.solve(t₀, Δt_3 , N, prob, RandNYS)
 pod = LSMOD.POD(prob.internal^2,M_3,m_3)
-sol_POD_3 = LSMOD.solve(t₀, Δt, N, prob, pod)
+sol_POD_3 = LSMOD.solve(t₀, Δt_3 , N, prob, pod)
 RQR=LSMOD.RandomizedQR(prob.internal^2,M_3,m_3)
-sol_Rand_3 = LSMOD.solve(t₀, Δt, N, prob, RQR)
+sol_Rand_3 = LSMOD.solve(t₀, Δt_3 , N, prob, RQR)
+RSVD=LSMOD.RandomizedSVD(prob.internal^2,M_3,m_3)
+sol_RandSVD_3 = LSMOD.solve(t₀, Δt_3 , N, prob, RSVD)
 
 start = 40 
-base1,base2 = solver_time(sol_base_3,start,"base")
-savefig(base1, "Figures/Timing/base1.png")
-savefig(base2, "Figures/Timing/base2.png")
 
-POD1,POD2 = solver_time(sol_POD_3,start,"POD")
-savefig(POD1, "Figures/Timing/POD1.png")
-savefig(POD2, "Figures/Timing/POD2.png")
+function save_img(list,start,tag)
+    f1,f2 = solver_time(list,start,tag)
+    savefig(f1, "Figures/Timing/"*tag*"1.png")
+    savefig(f2, "Figures/Timing/"*tag*"2.png")
 
-POD3 = reduced_time(sol_POD_3,start,"POD")
-savefig(POD3, "Figures/Timing/POD3.png")
+    if tag!="base"
+        f3 = reduced_time(list,start,tag)
+        savefig(f3, "Figures/Timing/"*tag*"3.png")
+    end
+end
 
-Randomized1,Randomized2 = solver_time(sol_Rand_3,start,"Randomized QR")
-savefig(Randomized1, "Figures/Timing/Randomized1.png")
-savefig(Randomized2, "Figures/Timing/Randomized2.png")
+save_img(sol_base_3,start,"base")
+save_img(sol_POD_3,start,"POD")
+save_img(sol_Rand_3,start,"RandomizedQR")
+save_img(sol_RandSVD_3,start,"RandomizedSVD")
+save_img(sol_RNYS_3,start,"Nystrom")
 
-Randomized3 = reduced_time(sol_Rand_3,start,"Randomized QR")
-savefig(Randomized3, "Figures/Timing/Randomized3.png")
 
-f3,f4 = method_comp(sol_base_3,sol_POD_3,"POD",sol_Rand_3,"Randomized",start)
+f3,f4 = method_comp(sol_base_3,sol_POD_3,"POD",sol_Rand_3,"RandomizedQR", sol_RandSVD_3, "RandomizedSVD", sol_RNYS_3,"Nystrom",start)
 savefig(f3, "Figures/Timing/comp.png")
 savefig(f4, "Figures/Timing/Cumulative_comp.png")

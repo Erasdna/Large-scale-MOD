@@ -21,7 +21,7 @@ struct DifferentialOperators2D <: DifferentialOperators
 		D = spdiagm(
 			-2 => (1) .* ones(N - 2),
 			-1 => (-8) .* ones(N - 1),
-			2 => (-1)*ones(N - 2),
+			2 => (-1) * ones(N - 2),
 			1 => (8) .* ones(N - 1),
 		)
 
