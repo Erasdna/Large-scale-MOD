@@ -9,18 +9,18 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 
 	LU=nothing
 
-	A = spzeros(problem.internal^2,problem.internal^2)
-	rhs = zeros(problem.internal^2)
+	#A = spzeros(problem.internal^2,problem.internal^2)
+	#rhs = zeros(problem.internal^2)
 	mat = Matrix{Float64}(undef,problem.internal^2,N)
 	
 	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1)*Δt))) 
 	for (i, time) ∈ iter
-		updateLinearSystem!(A,rhs,problem, time)
-		preconditioner_time = @elapsed LU=ILUZero.ilu0(A)
+		updateLinearSystem!(problem, time)
+		preconditioner_time = @elapsed LU=ILUZero.ilu0(problem.update.A)
 		if i==1
-			sol, GMRES_time =run_gmres!(nothing,A,rhs,iter,solutions,problem,i,time,LU; use_guess=false)
+			sol, GMRES_time =run_gmres!(nothing,problem.update.A,problem.update.rhs_vec,iter,solutions,problem,i,time,LU; use_guess=false)
 		else
-			sol,GMRES_time=run_gmres!(prevsol,A,rhs,iter,solutions,problem,i,time,LU)
+			sol,GMRES_time=run_gmres!(prevsol,problem.update.A,problem.update.rhs_vec,iter,solutions,problem,i,time,LU)
 		end
 		mat[:,i] .= sol
 		prevsol = sol
@@ -37,19 +37,19 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 
 	t₀=solutions[strategy.M][:time]
 	
-	A = spzeros(problem.internal^2,problem.internal^2)
-	rhs = zeros(problem.internal^2)
+	#A = spzeros(problem.internal^2,problem.internal^2)
+	#rhs = zeros(problem.internal^2)
 
 	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1-strategy.M)*Δt)))
 	for (i,time) ∈ iter
-		updateLinearSystem!(A,rhs,problem, time)
-		preconditioner_time = @elapsed ILUZero.ilu0!(LU,A)
+		updateLinearSystem!(problem, time)
+		preconditioner_time = @elapsed ILUZero.ilu0!(LU,problem.update.A)
 
 		basis_time = @elapsed orderReduction!(strategy)
 		
 		#ProgressBars.println(iter," ||(I - QQᵀ)X||₂ ", norm((I(problem.internal^2) - basis * basis' )*mat))
-		guess_time = @elapsed IG,guess_timing = generate_guess(A,strategy.basis,rhs)
-		sol,GMRES_time =run_gmres!(IG,A,rhs,iter,solutions,problem,i+strategy.M,time,LU)
+		guess_time = @elapsed IG,guess_timing = generate_guess(problem.update.A,strategy.basis,problem.update.rhs_vec)
+		sol,GMRES_time =run_gmres!(IG,problem.update.A,problem.update.rhs_vec,iter,solutions,problem,i+strategy.M,time,LU)
 		
 		if projection_error
 			#ProgressBars.println(iter,norm(strategy.solutions - strategy.basis*strategy.basis' * strategy.solutions)/norm(strategy.solutions))

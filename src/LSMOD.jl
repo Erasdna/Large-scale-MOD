@@ -1,6 +1,6 @@
 module LSMOD
 
-using LinearAlgebra, SparseArrays, Base.Iterators, ForwardDiff, TimerOutputs, MKL
+using LinearAlgebra, SparseArrays, Base.Iterators, ForwardDiff, TimerOutputs, MKL, LoopVectorization
 
 include("utils.jl")
 include("Problem.jl")

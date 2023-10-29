@@ -47,6 +47,24 @@ struct DifferentialOperators2D <: DifferentialOperators
 
 end
 
+struct ProblemUpdate
+	a_vec :: Vector
+	∂a∂x_vec :: Vector
+	∂a∂y_vec :: Vector
+	rhs_vec :: Vector
+	A :: SparseMatrixCSC
+
+	function ProblemUpdate(N::Integer, Example_A::SparseMatrixCSC)
+		return new(
+			Vector{Float64}(undef, N),
+			Vector{Float64}(undef, N),
+			Vector{Float64}(undef, N),
+			Vector{Float64}(undef, N),
+			similar(Example_A)
+		)
+	end
+end
+
 struct EllipticPDE <: Problem
 	"""
 		Problem on the form ∇⋅(a(x,t)∇f(x,t)) = rhs(x,t)
@@ -59,6 +77,8 @@ struct EllipticPDE <: Problem
 	rhs::Any
 	∂D::DifferentialOperators2D
 	edge::Any
+	update :: ProblemUpdate
+
 	function EllipticPDE(
 		in::Int64,
 		xmin::Float64,
@@ -75,13 +95,15 @@ struct EllipticPDE <: Problem
 		edge = sort(collect([1:N; (N+1):N:(N^2-2*N+1); (2*N):N:(N^2-N); (N^2-N+1):N^2]))
 		grid = collect(Iterators.product(range(xmin, xmax, N), range(ymin, ymax, N)))
 		inner_grid = grid[InvertedIndices.Not(edge)]
+		op=DifferentialOperators2D(in, (xmax - xmin) / N, (ymax - ymin) / N)
 		new(in,
 			grid,
 			inner_grid,
 			a,
 			rhs,
-			DifferentialOperators2D(in, (xmax - xmin) / N, (ymax - ymin) / N),
+			op,
 			edge,
+			ProblemUpdate(in^2, op.Δ)
 		)
 	end
 end
