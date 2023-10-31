@@ -17,7 +17,7 @@ using .LSMOD
             - Fourth order discretisation scheme in time
 """
 
-N=200
+N=1000
 steps = 1:200
 
 #Δt = 10⁻³
@@ -26,7 +26,7 @@ m_3=20
 Δt_3 = 1e-3
 t₀=0.0
 
-prob = LSMOD.Example1.prob
+prob = LSMOD.Example1.make_prob(100)
 
 sol_base_3,_ = LSMOD.solve(t₀, Δt_3 , N, prob)
 RandNYS = LSMOD.Nystrom(prob.internal^2,M_3,14,7)
@@ -51,14 +51,15 @@ extract_proj_X(v) = [v[el][:proj_X] for el in range(M_3+1,length(v))]
 extract_r0(v) = [v[el][:r0] for el in range(M_3+1,length(v))]
 
 
-fig1 = scatter(range(2,N), 
+fig1 = scatter(range(M_3+1,N), 
             [l1,l2,l3,l4,l5], 
             title = L"Δt = 10^{-3}, M=35, m=20", 
-            label= ["Base" "POD" "Randomized QR" "Randomized SVD" "Nystrom"], 
+            label= [L"\mathrm{Base}" L"\mathrm{POD}" L"\mathrm{Randomized QR}" L"\mathrm{Randomized SVD}" L"\mathrm{Nystrom}"], 
             lw=2,
-            xlabel="Timestep",
-            ylabel="GMRES iterations")
-Plots.savefig(fig1,"Figures/10_3_with_precond_opt.png")
+            xlabel=L"\mathrm{Timestep}",
+            ylabel=L"\mathrm{GMRES iterations}")
+Plots.savefig(fig1,"Figures/10_3_all.png")
+Plots.savefig(fig1,"Figures/10_3_all.svg")
 
 proj_X = extract_proj_X(sol_POD_3)
 l2_proj = extract_proj(sol_POD_3)
@@ -70,11 +71,13 @@ l5_proj = extract_proj(sol_RNYS_3)
 fig3 = scatter(range(M_3+1,N), 
             [proj_X,l2_proj,l3_proj,l4_proj,l5_proj], 
             title = L"Δt = 10^{-3}, M=35, m=20", 
-            label= ["QR(X)" "POD" "Randomized QR" "Randomized SVD" "Nystrom"], 
+            label= [L"\mathrm{QR(X)}" L"\mathrm{POD}" L"\mathrm{Randomized QR}" L"\mathrm{Randomized SVD}" L"\mathrm{Nystrom}"], 
             lw=2,
-            xlabel="Timestep",
-            ylabel=L"||(I-QQ^T)X||")
+            yaxis=:log10,
+            xlabel=L"\mathrm{Timestep}",
+            ylabel=L"||(I-QQ^T)X||_F/||X||_F")
 Plots.savefig(fig3,"Figures/projection_error.png")
+Plots.savefig(fig3,"Figures/projection_error.svg")
 
 l1_r0 = extract_r0(sol_base_3)
 l2_r0 = extract_r0(sol_POD_3)
@@ -96,24 +99,48 @@ m_5=10
 Δt_5 = 1e-5
 
 sol_base_5,_ = LSMOD.solve(t₀, Δt_5 , N, prob)
+RandNYS_2 = LSMOD.Nystrom(prob.internal^2,M_5,7,3)
+sol_RNYS_5 = LSMOD.solve(t₀, Δt_5 , N, prob, RandNYS_2; projection_error=true)
 pod_2 = LSMOD.POD(prob.internal^2,M_5,m_5)
-sol_POD_5 = LSMOD.solve(t₀, Δt_5 , N, prob, pod_2)
+sol_POD_5 = LSMOD.solve(t₀, Δt_5 , N, prob, pod_2; projection_error=true)
 RQR_2 =LSMOD.RandomizedQR(prob.internal^2,M_5,m_5)
-sol_Rand_5 = LSMOD.solve(t₀, Δt_5 , N, prob, RQR_2)
+sol_Rand_5 = LSMOD.solve(t₀, Δt_5 , N, prob, RQR_2; projection_error=true)
 RSVD_2 =LSMOD.RandomizedSVD(prob.internal^2,M_5,m_5)
-sol_RandSVD_5 = LSMOD.solve(t₀, Δt_5 , N, prob, RSVD_2)
+sol_RandSVD_5 = LSMOD.solve(t₀, Δt_5 , N, prob, RSVD_2; projection_error=true)
 
 
 l1_2 = extract_iters(sol_base_5)
 l2_2 = extract_iters(sol_POD_5)
 l3_2 = extract_iters(sol_Rand_5)
 l4_2 = extract_iters(sol_RandSVD_5)
+l5_2 = extract_iters(sol_RNYS_5)
 
 
-fig2 = scatter(steps, 
-            [l1_2,l2_2,l3_2, l4_2], 
+fig2 = scatter(range(M_3+1,N), 
+            [l1_2,l2_2,l3_2, l4_2,l5_2], 
             title = L"Δt = 10^{-5}, M=20, m=10", 
-            label= ["Base" "POD" "Randomized QR" "Randomized SVD"], 
-            xlabel="Timestep",
-            ylabel="GMRES iterations")
-Plots.savefig("Figures/10_5_with_precond_opt.png")
+            label= [L"\mathrm{Base}" L"\mathrm{POD}" L"\mathrm{Randomized QR}" L"\mathrm{Randomized SVD}" L"\mathrm{Nystrom}"], 
+            lw=2,
+            xlabel=L"\mathrm{Timestep}",
+            ylabel=L"\mathrm{GMRES iterations}")
+Plots.savefig(fig2,"Figures/10_5_all.png")
+Plots.savefig(fig2,"Figures/10_5_all.svg")
+
+
+proj_X_5 = extract_proj_X(sol_POD_5)
+l2_proj_5 = extract_proj(sol_POD_5)
+l3_proj_5 = extract_proj(sol_Rand_5)
+l4_proj_5 = extract_proj(sol_RandSVD_5)
+l5_proj_5 = extract_proj(sol_RNYS_5)
+
+
+fig5 = scatter(range(M_3+1,N), 
+            [proj_X_5,l2_proj_5,l3_proj_5,l4_proj_5,l5_proj_5], 
+            title = L"Δt = 10^{-5}, M=20, m=10",
+            label= [L"\mathrm{QR(X)}" L"\mathrm{POD}" L"\mathrm{Randomized QR}" L"\mathrm{Randomized SVD}" L"\mathrm{Nystrom}"], 
+            lw=2,
+            yaxis=:log10,
+            xlabel=L"\mathrm{Timestep}",
+            ylabel=L"||(I-QQ^T)X||_F/||X||_F")
+Plots.savefig(fig5,"Figures/projection_error.png")
+Plots.savefig(fig5,"Figures/projection_error.svg")

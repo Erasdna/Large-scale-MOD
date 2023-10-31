@@ -32,15 +32,17 @@ end
 
 g1(x::Tuple,t) = rhs1(x,t,a1,exact1)
 
-prob = LSMOD.EllipticPDE(
-	100, # discretisation (each direction)
-	0.0, # xmin
-	1.0, # xmax
-	0.0, # ymin
-	1.0, # ymax
-	a1, # wave speed (~ish)
-	g1, # rhs
-)
+function make_prob(N::Integer)
+    return LSMOD.EllipticPDE(
+                N, # discretisation (each direction)
+                0.0, # xmin
+                1.0, # xmax
+                0.0, # ymin
+                1.0, # ymax
+                a1, # wave speed (~ish)
+                g1, # rhs
+            )
+end
 
 end
 #Example1 = ExampleProblem(prob,exact1)

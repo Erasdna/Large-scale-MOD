@@ -1,4 +1,4 @@
-import ProgressBars, Printf, Krylov, InvertedIndices, ILUZero, IterativeSolvers
+import ProgressBars, Printf, Krylov, InvertedIndices, ILUZero
 
 function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 	"""
@@ -9,8 +9,6 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 
 	LU=nothing
 
-	#A = spzeros(problem.internal^2,problem.internal^2)
-	#rhs = zeros(problem.internal^2)
 	mat = Matrix{Float64}(undef,problem.internal^2,N)
 	
 	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1)*Δt))) 
@@ -36,9 +34,6 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 	strategy.solutions .= mat # Need more general strategy!
 
 	t₀=solutions[strategy.M][:time]
-	
-	#A = spzeros(problem.internal^2,problem.internal^2)
-	#rhs = zeros(problem.internal^2)
 
 	iter = ProgressBars.ProgressBar(enumerate(t₀:Δt:(t₀+(N-1-strategy.M)*Δt)))
 	for (i,time) ∈ iter
@@ -52,8 +47,7 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 		sol,GMRES_time =run_gmres!(IG,problem.update.A,problem.update.rhs_vec,iter,solutions,problem,i+strategy.M,time,LU)
 		
 		if projection_error
-			#ProgressBars.println(iter,norm(strategy.solutions - strategy.basis*strategy.basis' * strategy.solutions)/norm(strategy.solutions))
-			solutions[i+strategy.M][:proj] = norm(strategy.solutions - strategy.basis*strategy.basis' * strategy.solutions)/norm(strategy.solutions)
+			solutions[i+strategy.M][:proj] = proj(strategy)
 			Ff = qr(strategy.solutions)
 			Qq = Matrix(Ff.Q)
 			solutions[i+strategy.M][:proj_X] = norm(strategy.solutions - Qq*Qq' * strategy.solutions)/norm(strategy.solutions)
@@ -99,4 +93,13 @@ function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, prec
 
 	solutions[index] = Dict(:x => full_sol, :history => history, :time => time, :residual => res, :IG => sv, :r0 => r0/norm(rhs))
 	return sol, GMRES_time
+end
+
+function proj(strategy::Strategy)
+	return norm(strategy.solutions - strategy.basis*strategy.basis' * strategy.solutions)/norm(strategy.solutions)
+end
+
+function proj(strategy::Nystrom)
+	A_r = (strategy.prod1)*pinv(strategy.prod2)*(strategy.Ω₂' * strategy.solutions)
+	return norm(strategy.solutions - A_r)
 end
