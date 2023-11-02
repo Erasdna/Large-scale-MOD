@@ -23,7 +23,7 @@ function updateLinearSystem!(problem::EllipticPDE, time::Float64)
     @inbounds @simd for col in 1:size(problem.∂D.Δ,2)
         for r in nzrange(problem.∂D.Δ,col)
             row = rowvals(problem.∂D.Δ)[r]
-            problem.update.A[row,col] = problem.update.a_vec[row]*nonzeros(problem.∂D.Δ)[r] + problem.update.∂a∂x_vec[col]*problem.∂D.∂x[row,col] + problem.update.∂a∂y_vec[col]*problem.∂D.∂y[row,col] 
+            problem.update.A[row,col] = problem.update.a_vec[row]*nonzeros(problem.∂D.Δ)[r] + problem.update.∂a∂x_vec[row]*problem.∂D.∂x[row,col] + problem.update.∂a∂y_vec[row]*problem.∂D.∂y[row,col] 
         end
     end
 

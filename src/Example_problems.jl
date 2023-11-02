@@ -17,7 +17,7 @@ a1(x::Tuple, t) = a([x...],t)
 
 #Exact solution
 exact1(x::Vector, t) = sin(4*pi*x[1])*sin(4*pi*x[2])*(1 + sin(15*pi*x[1]*t)*sin(3*pi*x[2]*t)*exp(-(x[1]-0.5)^2 - (x[2]-0.5)^2 - 0.25^2)) 
-exact1(x::Tuple, t) = exact([x...],t) 
+exact1(x::Tuple, t) = exact1([x...],t) 
 
 #We calculate the rhs function using automatic differentiation
 function rhs1(x::Tuple,t,a,exact)

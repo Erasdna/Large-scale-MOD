@@ -24,21 +24,21 @@ m=10
 Nys_k = 7
 Nys_p = 3
 Δt = 1e-5
-t₀=0.0
+t₀=0.1
 projection_error = true
-filename = pwd() * "/Examples/Data/10e_5_all.jld2"
+filename = pwd() * "/Examples/Data/10e_5_all_3.jld2"
 
 prob = LSMOD.Example1.make_prob(100)
 
-sol_base,_ = LSMOD.solve(t₀, Δt , N, prob)
-RandNYS = LSMOD.Nystrom(prob.internal^2,M,Nys_k,Nys_p)
-sol_RNYS = LSMOD.solve(t₀, Δt , N, prob, RandNYS; projection_error=projection_error)
-pod = LSMOD.POD(prob.internal^2,M,m)
-sol_POD = LSMOD.solve(t₀, Δt , N, prob, pod; projection_error=projection_error)
-RQR=LSMOD.RandomizedQR(prob.internal^2,M,m)
-sol_Rand = LSMOD.solve(t₀, Δt , N, prob, RQR; projection_error=projection_error)
-RSVD=LSMOD.RandomizedSVD(prob.internal^2,M,m)
-sol_RandSVD = LSMOD.solve(t₀, Δt, N, prob, RSVD; projection_error=projection_error)
+sol_base,_ = LSMOD.solve(t₀, Δt , N, deepcopy(prob));
+RandNYS = LSMOD.Nystrom(prob.internal^2,M,Nys_k,Nys_p);
+sol_RNYS = LSMOD.solve(t₀, Δt , N, deepcopy(prob), RandNYS; projection_error=projection_error);
+pod = LSMOD.POD(prob.internal^2,M,m);
+sol_POD = LSMOD.solve(t₀, Δt , N, deepcopy(prob), pod; projection_error=projection_error);
+RQR=LSMOD.RandomizedQR(prob.internal^2,M,m);
+sol_Rand = LSMOD.solve(t₀, Δt , N, deepcopy(prob), RQR; projection_error=projection_error);
+RSVD=LSMOD.RandomizedSVD(prob.internal^2,M,m);
+sol_RandSVD = LSMOD.solve(t₀, Δt, N, deepcopy(prob), RSVD; projection_error=projection_error);
 
 save(filename, 
     Dict("base" => sol_base,

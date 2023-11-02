@@ -54,7 +54,7 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 		end
 
 		#cycle_and_replace!(strategy.solutions,sol)
-		strategy.solutions .= circshift(strategy.solutions,(0,-1))
+		strategy.solutions = circshift(strategy.solutions,(0,-1))
 		strategy.solutions[:,end] .= sol
 
 		solutions[i+strategy.M][:timing] = Dict(:preconditioner => preconditioner_time, :gmres => GMRES_time, :basis => basis_time, :guess => guess_time, :guess_detailed => guess_timing)

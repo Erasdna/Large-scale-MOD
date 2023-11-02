@@ -2,40 +2,22 @@ using LinearAlgebra,ForwardDiff, Revise, Plots
 include("../src/LSMOD.jl")
 using .LSMOD
 
-#Wave speed
-a(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
-a(x::Tuple, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
+prob = LSMOD.Example1.make_prob(100)
 
-#Exact solution
-exact(x::Vector, t) = sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(15 * pi * x[2] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
-exact(x::Tuple, t) = sin(4 * pi * x[2]) * sin(4 * pi * x[1])*(1 + sin(15 * pi * x[2] * t) * exp((x[1] - 0.5)^2 + (x[2] - 0.5)^2 + 0.25^2))
+N=1000
+M=20
+m=10
 
-#We calculate the rhs function using automatic differentiation
-function rhs(x::Tuple,t,a,exact)
-    frozen_a(y::Vector) = a(y,t)
-    frozen_exact(y::Vector) = exact(y,t)
-    
-    x_vec = [x...]
-    d1 = ForwardDiff.gradient(frozen_a,x_vec)' * ForwardDiff.gradient(frozen_exact,x_vec)
-    d2 = frozen_a(x_vec) * tr(ForwardDiff.hessian(frozen_exact,x_vec))
-    return d1 + d2
-end
+Nys_k = 7
+Nys_p = 3
+Δt = 1e-5
+t₀=0.1
 
-g(x::Tuple,t) = rhs(x,t,a,exact)
+sols,_ = LSMOD.solve(t₀, Δt, N, prob);
+#RandNYS = LSMOD.Nystrom(prob.internal^2,M,Nys_k,Nys_p)
+#sols = LSMOD.solve(t₀, Δt , N, prob, RandNYS)
 
-prob = LSMOD.EllipticPDE(
-	100, # discretisation (each direction)
-	0.0, # xmin
-	1.0, # xmax
-	0.0, # ymin
-	1.0, # ymax
-	a, # wave speed (~ish)
-	g, # rhs
-)
-
-sols = LSMOD.solve(2.3, 1e-5, 10, prob);
-
-eff(x) = exact(x, sols[end][:time])
+eff(x) = LSMOD.Example1.exact1(x, sols[end][:time])
 
 println(norm(collect(Iterators.flatmap(eff,prob.grid)) - sols[end][:x])/norm(sols[end][:x]))
 ff = surface(collect(Iterators.flatten(getfield.(prob.grid, 1))),

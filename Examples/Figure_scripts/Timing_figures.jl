@@ -1,4 +1,4 @@
-using JLD2,Plots, LaTeXStrings
+using JLD2,Plots, LaTeXStrings, Statistics
 include(pwd()*"/src/LSMOD.jl")
 using .LSMOD
 
@@ -21,7 +21,7 @@ end
 
 function solver_time(data,M::Integer,ind)
     precon,basis,guess,gmres,non_gmres,_ = extract_timing(data,M)
-
+    println("basis: ", median(basis))
     #Proportion of each timing
     fig1 = scatter(ind, 
             [cumsum(precon)[ind],cumsum(basis)[ind],cumsum(guess)[ind],cumsum(gmres)[ind]], 
@@ -45,9 +45,12 @@ function method_comp(base,method1, tag1::String, method2, tag2::String, method3,
     m3 = extract_timing(method3,M)
     m4 = extract_timing(method4,M)
     fig1 = scatter(ind, 
-            [b[end][ind],m1[end][ind],m2[end][ind],m3[end][ind],m4[end][ind]], 
-            label= ["base" tag1 tag2 tag3 tag4], 
+            [m1[end][ind],m2[end][ind],m3[end][ind],m4[end][ind],b[end][ind]], 
+            label= [tag1 tag2 tag3 tag4 "base"], 
             lw=2,
+            guidefontsize=14,
+            tickfontsize=12,
+            legendfontsize=12,
             xlabel="Timestep",
             ylabel="Time [s]")
     bb=cumsum(b[end])
@@ -55,6 +58,9 @@ function method_comp(base,method1, tag1::String, method2, tag2::String, method3,
             [(bb./cumsum(m1[end]))[ind],(bb./cumsum(m2[end]))[ind],(bb./cumsum(m3[end]))[ind],(bb./cumsum(m4[end]))[ind]], 
             label= [tag1 tag2 tag3 tag4], 
             lw=2,
+            guidefontsize=14,
+            tickfontsize=12,
+            legendfontsize=12,
             xlabel="Timestep",
             ylabel="Speedup")
     return fig1,fig2
@@ -62,7 +68,7 @@ end
 
 function reduced_time(data,M::Integer, title::String, ind)
     AQ,LS,IG = extract_reduced_timing(data,M)
-
+    println("AQ: ", median(AQ), " LS: ", median(LS))
     #Proportion of each timing
     fig1 = scatter(ind, 
             [AQ[ind],LS[ind],IG[ind]], 
@@ -75,6 +81,7 @@ function reduced_time(data,M::Integer, title::String, ind)
 end
 
 function save_img(list,start,tag,file,ind)
+    println(tag)
     f1,f2 = solver_time(list,start,ind)
     savefig(f1, file*"/"*tag*"_split.png")
     savefig(f2, file*"/"*tag*"_gmres.png")
@@ -85,8 +92,8 @@ function save_img(list,start,tag,file,ind)
     end
 end
 
-filename = pwd() * "/Examples/Data/10e_5_all_noproj.jld2"
-savefile = pwd() * "/Figures/Examples/Timing/10e_5_all"
+filename = pwd() * "/Examples/Data/10e_5_all_3.jld2"
+savefile = pwd() * "/Figures/Examples/Timing/10e_5_all_3"
 dat = load(filename)
 
 start = dat["M"]+1
@@ -99,7 +106,7 @@ save_img(dat["RandQR"],start,"RangeFinder",savefile,ind)
 save_img(dat["RandSVD"],start,"RandomizedSVD",savefile,ind)
 save_img(dat["Nystrom"],start,"Nystrom",savefile,ind)
 
-f3,f4 = method_comp(dat["base"],dat["POD"],"POD",dat["RandQR"],"RangeFinder", dat["RandSVD"], "Randomized SVD", dat["Nystrom"],"Nystrom",start,ind)
+f3,f4 = method_comp(dat["base"],dat["Nystrom"],"Nystrom",dat["POD"],"POD",dat["RandQR"],"RangeFinder", dat["RandSVD"], "Randomized SVD", start,ind)
 savefig(f3, savefile*"/comp.png")
 savefig(f3, savefile*"/comp.svg")
 savefig(f4, savefile*"/cumulative_comp.png")

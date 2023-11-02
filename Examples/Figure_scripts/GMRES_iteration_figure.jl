@@ -2,8 +2,8 @@ using JLD2,Plots, LaTeXStrings
 include(pwd()*"/src/LSMOD.jl")
 using .LSMOD
 
-filename = pwd() * "/Examples/Data/10e_3_all.jld2"
-savefile = pwd() * "/Figures/Examples/GMRES/10e_3_all"
+filename = pwd() * "/Examples/Data/10e_5_all_3.jld2"
+savefile = pwd() * "/Figures/Examples/GMRES/10e_5_all_3"
 dat = load(filename)
 
 start = dat["M"]+1
@@ -20,8 +20,8 @@ ind = 1:step:(dat["N"]-start)
 title = L"\Delta t = "*string(dat["dt"])*", M="*string(dat["M"])*", m="*string(dat["m"])
 
 fig = scatter(ind, 
-            [base[ind],Nystrom[ind],POD[ind],RangeFinder[ind],RandomizedSVD[ind]], 
-            label= ["Base" "Nystrom" "POD" "Range Finder" "Randomized SVD"], 
+            [Nystrom[ind],POD[ind],RangeFinder[ind],RandomizedSVD[ind],base[ind]], 
+            label= ["Nystrom" "POD" "Range Finder" "Randomized SVD" "Base"], 
             lw=2,
             grid=true,
             guidefontsize=14,
