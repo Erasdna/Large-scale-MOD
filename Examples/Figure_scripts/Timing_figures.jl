@@ -2,6 +2,8 @@ using JLD2,Plots, LaTeXStrings, Statistics
 include(pwd()*"/src/LSMOD.jl")
 using .LSMOD
 
+extract_iters(v,start) = [v[el][:history].niter for el in range(start,length(v))]
+
 function extract_timing(data,start)
     precon = [data[el][:timing][:preconditioner] for el in range(start,length(data))]
     basis = [haskey(data[el][:timing],:basis) ? data[el][:timing][:basis] : 0.0 for el in range(start,length(data))]
@@ -21,7 +23,10 @@ end
 
 function solver_time(data,M::Integer,ind)
     precon,basis,guess,gmres,non_gmres,_ = extract_timing(data,M)
+    iters = extract_iters(data,M)
     println("basis: ", median(basis))
+    println("basis: ", median(basis)/4e-4)
+    println("GMRES time per iteration: ", sum(gmres)/sum(iters))
     #Proportion of each timing
     fig1 = scatter(ind, 
             [cumsum(precon)[ind],cumsum(basis)[ind],cumsum(guess)[ind],cumsum(gmres)[ind]], 
@@ -40,10 +45,19 @@ end
 
 function method_comp(base,method1, tag1::String, method2, tag2::String, method3,tag3,method4,tag4,M,ind)
     b = extract_timing(base,M)
+    b_iters = extract_iters(base,M)
     m1 = extract_timing(method1,M)
+    m1_iters = extract_iters(method1,M)
+    println(tag1, " ", sum(b_iters)/sum(m1_iters))
     m2 = extract_timing(method2,M)
+    m2_iters = extract_iters(method2,M)
+    println(tag2, " ", sum(b_iters)/sum(m2_iters))
     m3 = extract_timing(method3,M)
+    m3_iters = extract_iters(method3,M)
+    println(tag3, " ", sum(b_iters)/sum(m3_iters))
     m4 = extract_timing(method4,M)
+    m4_iters = extract_iters(method4,M)
+    println(tag4, " ", sum(b_iters)/sum(m4_iters))
     fig1 = scatter(ind, 
             [m1[end][ind],m2[end][ind],m3[end][ind],m4[end][ind],b[end][ind]], 
             label= [tag1 tag2 tag3 tag4 "base"], 
@@ -51,6 +65,7 @@ function method_comp(base,method1, tag1::String, method2, tag2::String, method3,
             guidefontsize=14,
             tickfontsize=12,
             legendfontsize=12,
+            ylims=(0,maximum(b[end][ind])+0.001),
             xlabel="Timestep",
             ylabel="Time [s]")
     bb=cumsum(b[end])
@@ -69,6 +84,7 @@ end
 function reduced_time(data,M::Integer, title::String, ind)
     AQ,LS,IG = extract_reduced_timing(data,M)
     println("AQ: ", median(AQ), " LS: ", median(LS))
+    println("AQ: ", median(AQ)/(4e-4), " LS: ", median(LS)/4e-4)
     #Proportion of each timing
     fig1 = scatter(ind, 
             [AQ[ind],LS[ind],IG[ind]], 
@@ -92,11 +108,11 @@ function save_img(list,start,tag,file,ind)
     end
 end
 
-filename = pwd() * "/Examples/Data/10e_5_all_3.jld2"
-savefile = pwd() * "/Figures/Examples/Timing/10e_5_all_3"
+filename = pwd() * "/Examples/Data/10e_5_all.jld2"
+savefile = pwd() * "/Figures/Examples/Timing/10e_5_all"
 dat = load(filename)
 
-start = dat["M"]+1
+start = dat["M"]+2
 step = 10
 ind = 1:step:(dat["N"]-start)
 

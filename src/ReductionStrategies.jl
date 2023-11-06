@@ -142,6 +142,7 @@ mutable struct Nystrom <: RandomizedStrategy
 	const Ω₂::AbstractMatrix # right sample matrix
 	prod1::AbstractMatrix
 	prod2::AbstractMatrix
+	const dim :: Integer
 
 	function Nystrom(dim::Integer, M::Integer, r::Integer, l::Integer)
 		return new(
@@ -154,6 +155,7 @@ mutable struct Nystrom <: RandomizedStrategy
 			randn(dim, r + l),
 			Matrix{Float64}(undef, dim, r),
 			Matrix{Float64}(undef, r + l, r),
+			dim,
 		)
 	end
 end
@@ -162,6 +164,9 @@ function orderReduction!(strategy::Nystrom)
 	"""
 		Computes the left side projection operator of the generalized Nystrom approximation
 	"""
+	strategy.Ω₁ .= randn(strategy.M,strategy.r)
+	strategy.Ω₂ .= randn(strategy.dim,strategy.r+strategy.l)
+
 	# XΩ₁
 	mul!(strategy.prod1, strategy.solutions, strategy.Ω₁)
 	# Ω₂ᵀXΩ₁

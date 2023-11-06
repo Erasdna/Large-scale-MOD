@@ -2,8 +2,8 @@ using JLD2,Plots, LaTeXStrings
 include(pwd()*"/src/LSMOD.jl")
 using .LSMOD
 
-filename = pwd() * "/Examples/Data/10e_5_all_3.jld2"
-savefile = pwd() * "/Figures/Examples/GMRES/10e_5_all_3"
+filename = pwd() * "/Examples/Data/10e_5_all.jld2"
+savefile = pwd() * "/Figures/Examples/GMRES/10e_5_all"
 dat = load(filename)
 
 start = dat["M"]+1
