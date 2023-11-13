@@ -108,8 +108,8 @@ function save_img(list,start,tag,file,ind)
     end
 end
 
-filename = pwd() * "/Examples/Data/10e_5_all.jld2"
-savefile = pwd() * "/Figures/Examples/Timing/10e_5_all"
+filename = pwd() * "/Examples/Data/10e_3_update.jld2"
+savefile = pwd() * "/Figures/Examples/Timing/10e_3_update"
 dat = load(filename)
 
 start = dat["M"]+2

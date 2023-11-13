@@ -57,17 +57,16 @@ function sketch_update!(strategy::RandomizedStrategy)
 	"""
 		Builds and updates a sketch matrix of the sample
 	"""
-	if strategy.counter == strategy.freq || strategy.counter == 0
+	if strategy.counter % strategy.freq == 0 || strategy.counter == 0
 		strategy.Z .= randn((strategy.M, strategy.m))
-		#strategy.Ω .= strategy.solutions * strategy.Z
 		mul!(strategy.Ω, strategy.solutions, strategy.Z)
 		strategy.counter += 1
 	else
 		z = randn(strategy.m)
 		@. strategy.Ω += strategy.solutions[:, end] * (z') - strategy.old_Ω
-		#cycle_and_replace!(strategy.Z,z; col=false)
 		strategy.Z .= circshift(strategy.Z, (-1, 0))
 		strategy.Z[end, :] .= z
+		strategy.counter+=1
 	end
 
 	strategy.old_Ω .= strategy.solutions[:, 1] * (strategy.Z[1, :]')
@@ -80,8 +79,11 @@ function orderReduction!(strategy::RandomizedQR)
 	sketch_update!(strategy)
 
 	#Check out QRUpdate.jl?
-	F = qr(strategy.Ω)
-	strategy.basis .= @view Matrix(F.Q)[:, 1:strategy.m]
+	#F = qr(strategy.Ω)
+	#strategy.basis .= @view Matrix(F.Q)[:, 1:strategy.m]
+	tmp,tau=LAPACK.geqrf!(copy(strategy.Ω))
+	LAPACK.orgqr!(tmp,tau)
+	strategy.basis .= @view tmp[:,1:strategy.m]
 end
 
 mutable struct RandomizedSVD <: RandomizedStrategy
@@ -122,14 +124,16 @@ function orderReduction!(strategy::RandomizedSVD)
 	sketch_update!(strategy)
 
 	#QR
-	F = qr(strategy.Ω)
-	strategy.Q .= Matrix(F.Q)
+	#F = qr(strategy.Ω)
+	#strategy.Q .= Matrix(F.Q)
+	strategy.Q,tau=LAPACK.geqrf!(copy(strategy.Ω))
+	LAPACK.orgqr!(strategy.Q,tau)
 
 	#SVD
 	mul!(strategy.B, strategy.Q', strategy.solutions)
-	Fb = svd(strategy.B)
-
-	strategy.basis .= @view (strategy.Q*Fb.U)[:, 1:strategy.m]
+	#Fb = svd(strategy.B)
+	LAPACK.gesvd!('O','N',strategy.B)
+	strategy.basis .= @view (strategy.Q*strategy.B)[:, 1:strategy.m]
 end
 
 mutable struct Nystrom <: RandomizedStrategy
@@ -173,5 +177,10 @@ function orderReduction!(strategy::Nystrom)
 	mul!(strategy.prod2, strategy.Ω₂', strategy.prod1)
 
 	# XΩ₁(Ω₂ᵀXΩ₁)^†
-	mul!(strategy.basis, strategy.prod1, pinv(strategy.prod2))
+	#mul!(strategy.basis, strategy.prod1, pinv(strategy.prod2))
+	tmp,tau=LAPACK.geqrf!(copy(strategy.prod2))
+	R = @view triu(tmp)[1:strategy.r,1:strategy.r]
+	LAPACK.orgqr!(tmp,tau)
+	#strategy.basis .= tmp'
+	mul!(strategy.basis,strategy.prod1 / R,tmp')
 end

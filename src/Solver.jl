@@ -42,17 +42,17 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 
 		basis_time = @elapsed orderReduction!(strategy)
 		
+		if projection_error
+			tmp = proj(strategy)
+		end
+
+
 		#ProgressBars.println(iter," ||(I - QQᵀ)X||₂ ", norm((I(problem.internal^2) - basis * basis' )*mat))
 		guess_time = @elapsed IG,guess_timing = generate_guess(problem.update.A,strategy.basis,problem.update.rhs_vec)
 		sol,GMRES_time =run_gmres!(IG,problem.update.A,problem.update.rhs_vec,iter,solutions,problem,i+strategy.M,time,LU)
-		
 		if projection_error
-			solutions[i+strategy.M][:proj] = proj(strategy)
-			Ff = qr(strategy.solutions)
-			Qq = Matrix(Ff.Q)
-			solutions[i+strategy.M][:proj_X] = norm(strategy.solutions - Qq*Qq' * strategy.solutions)/norm(strategy.solutions)
+			solutions[i+strategy.M][:proj] = tmp
 		end
-
 		#cycle_and_replace!(strategy.solutions,sol)
 		strategy.solutions = circshift(strategy.solutions,(0,-1))
 		strategy.solutions[:,end] .= sol
@@ -100,6 +100,6 @@ function proj(strategy::Strategy)
 end
 
 function proj(strategy::Nystrom)
-	A_r = (strategy.prod1)*pinv(strategy.prod2)*(strategy.Ω₂' * strategy.solutions)
-	return norm(strategy.solutions - A_r)
+	A_r = (strategy.solutions*strategy.Ω₁)*pinv(strategy.Ω₂' * strategy.solutions*strategy.Ω₁)*(strategy.Ω₂' * strategy.solutions)
+	return norm(strategy.solutions - A_r)/norm(strategy.solutions)
 end

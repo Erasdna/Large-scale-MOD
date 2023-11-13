@@ -2,15 +2,15 @@ using JLD2,Plots, LaTeXStrings
 include(pwd()*"/src/LSMOD.jl")
 using .LSMOD
 
-filename = pwd() * "/Examples/Data/10e_3_all.jld2"
-savefile = pwd() * "/Figures/Examples/Projection/10e_3_all"
+filename = pwd() * "/Examples/Data/10e_3_update.jld2"
+savefile = pwd() * "/Figures/Examples/Projection/10e_3_update"
 dat = load(filename)
 
 start = dat["M"]+1
 extract_proj(v,start) = [v[el][:proj] for el in range(start,length(v))]
 extract_proj_X(v,start) = [v[el][:proj_X] for el in range(start,length(v))]
 
-base = extract_proj_X(dat["POD"],start)
+#base = extract_proj_X(dat["POD"],start)
 Nystrom = extract_proj(dat["Nystrom"],start)
 POD = extract_proj(dat["POD"],start)
 RangeFinder = extract_proj(dat["RandQR"],start)
@@ -29,8 +29,8 @@ fig = scatter(ind,
             guidefontsize=14,
             tickfontsize=12,
             legendfontsize=12,
-            legend=:best,
+            legend=:bottomright,
             xlabel="Timestep",
-            ylabel=L"||X - X_r||_F/||X||_F")
+            ylabel=L"||X - X_m||_F/||X||_F")
 Plots.savefig(fig,savefile*".png")
 Plots.savefig(fig,savefile*".svg")
