@@ -1,6 +1,6 @@
 import ProgressBars, Printf, Krylov, InvertedIndices, ILUZero
 
-function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
+function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, args...)
 	"""
 		Baseline iterative solver
 	"""
@@ -28,7 +28,7 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem)
 	return solutions,LU,mat
 end
 
-function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::Strategy; projection_error=false)
+function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::Strategy, LS = FullLS!; projection_error=false)
 	solutions = Array{Dict}(undef, N)
 	solutions[1:strategy.M],LU,mat = solve(t₀,Δt,strategy.M,problem)
 	strategy.solutions .= mat # Need more general strategy!
@@ -46,9 +46,8 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 			tmp = proj(strategy)
 		end
 
-
 		#ProgressBars.println(iter," ||(I - QQᵀ)X||₂ ", norm((I(problem.internal^2) - basis * basis' )*mat))
-		guess_time = @elapsed IG,guess_timing = generate_guess(problem.update.A,strategy.basis,problem.update.rhs_vec)
+		guess_time = @elapsed IG,guess_timing = generate_guess(strategy.basis,problem,time;LS=LS)
 		sol,GMRES_time =run_gmres!(IG,problem.update.A,problem.update.rhs_vec,iter,solutions,problem,i+strategy.M,time,LU)
 		if projection_error
 			solutions[i+strategy.M][:proj] = tmp
@@ -63,14 +62,19 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 	return solutions
 end
 
-function generate_guess(A,basis,rhs)
+function generate_guess(basis,problem,time; LS = FullLS)
+	# Modifies A or rhs to have smaller first dimension
+	# for faster least squares 
+
+	red_time = @elapsed ind,A,rhs = LS(problem.update.A,problem.update.rhs_vec, problem,time)
+	
 	AQ_time = @elapsed AQ = A * basis
 
-	IG_small=copy(rhs)
-	LS_time = @elapsed _,ig,_=LAPACK.gels!('N',AQ,IG_small) 
+	#IG_small=copy(rhs)
+	LS_time = @elapsed _,ig,_=LAPACK.gels!('N',AQ,rhs) 
 	IG_time = @elapsed IG = basis * ig
 
-	timing = Dict(:AQ => AQ_time, :LS => LS_time, :IG => IG_time)
+	timing = Dict(:AQ => AQ_time, :LS => LS_time, :IG => IG_time, :red => red_time)
 	return IG,timing
 end
 

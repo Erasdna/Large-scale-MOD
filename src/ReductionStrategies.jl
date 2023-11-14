@@ -178,9 +178,8 @@ function orderReduction!(strategy::Nystrom)
 
 	# XΩ₁(Ω₂ᵀXΩ₁)^†
 	#mul!(strategy.basis, strategy.prod1, pinv(strategy.prod2))
-	tmp,tau=LAPACK.geqrf!(copy(strategy.prod2))
-	R = @view triu(tmp)[1:strategy.r,1:strategy.r]
-	LAPACK.orgqr!(tmp,tau)
-	#strategy.basis .= tmp'
-	mul!(strategy.basis,strategy.prod1 / R,tmp')
+	_,tau=LAPACK.geqrf!(strategy.prod2)
+	R = @view triu(strategy.prod2)[1:strategy.r,1:strategy.r]
+	LAPACK.orgqr!(strategy.prod2,tau)
+	mul!(strategy.basis,strategy.prod1 / R,strategy.prod2')
 end

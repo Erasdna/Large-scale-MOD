@@ -4,6 +4,7 @@ using LinearAlgebra, SparseArrays, Base.Iterators, ForwardDiff, TimerOutputs, MK
 
 include("utils.jl")
 include("Problem.jl")
+include("RandomizedLeastSquares.jl")
 include("ReductionStrategies.jl")
 include("Solver.jl")
 include("LinearSystem.jl")

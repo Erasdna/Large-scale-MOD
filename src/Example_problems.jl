@@ -11,9 +11,27 @@ import ForwardDiff, LinearAlgebra
         f(x,y,t)=0 ∀(x,y) ∈ ∂Ω
     With Ω ⊂ [0,1]² using 100 grid points in each direction
 """
+struct waveSpeed 
+    a::Function
+    ∂a∂x::Function
+    ∂a∂y::Function
+    ∂a∂t::Function
+end
+
 #Wave speed
-a1(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
-a1(x::Tuple, t) = a([x...],t)
+a(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * cos(x[1] * t) + 2.1
+a(x::Tuple, t) = a([x...],t)
+
+∂a∂x(x::Vector, t) = (-1)*exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2)*(t*sin(x[1] * t) + 2*(x[1] - 0.5)*cos(x[1] * t))
+∂a∂x(x::Tuple, t) = ∂a∂x([x...],t)
+
+∂a∂y(x::Vector, t) = (-1)*exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2)*2*(x[2] - 0.5)* cos(x[1] * t)
+∂a∂y(x::Tuple, t) = ∂a∂y([x...],t)
+
+∂a∂t(x::Vector, t) = exp(-(x[1] - 0.5)^2 - (x[2] - 0.5)^2) * (-1*x[1])*sin(x[1] * t)
+∂a∂t(x::Tuple, t) = ∂a∂t([x...],t)
+
+a1 = waveSpeed(a,∂a∂x,∂a∂y,∂a∂t)
 
 #Exact solution
 exact1(x::Vector, t) = sin(4*pi*x[1])*sin(4*pi*x[2])*(1 + sin(15*pi*x[1]*t)*sin(3*pi*x[2]*t)*exp(-(x[1]-0.5)^2 - (x[2]-0.5)^2 - 0.25^2)) 
@@ -30,7 +48,7 @@ function rhs1(x::Tuple,t,a,exact)
     return d1 + d2
 end
 
-g1(x::Tuple,t) = rhs1(x,t,a1,exact1)
+g1(x::Tuple,t) = rhs1(x,t,a,exact1)
 
 function make_prob(N::Integer)
     return LSMOD.EllipticPDE(
@@ -45,4 +63,3 @@ function make_prob(N::Integer)
 end
 
 end
-#Example1 = ExampleProblem(prob,exact1)

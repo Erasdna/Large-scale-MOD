@@ -6,16 +6,18 @@ function updateLinearSystem!(problem::EllipticPDE, time::Float64)
     """
         Update linear system to be solved
     """
-    func(x::Vector) = problem.a(x,time)
-    func(x::Tuple) = func([x...])
+
+    #"Freeze" functions in time to simplify map
+    func(x::Tuple) = problem.a.a(x,time)
+    func∂x(x::Tuple) = problem.a.∂a∂x(x,time)
+    func∂y(x::Tuple) = problem.a.∂a∂y(x,time)
 
     inner_grid = vcat(problem.inner_grid)
-    problem.update.a_vec .= map(func,inner_grid)
-    ∇a(x::Tuple) = ForwardDiff.gradient(func,[x...])
-    val = map(∇a,inner_grid)
 
-    problem.update.∂a∂x_vec .= getindex.(val,1)
-    problem.update.∂a∂y_vec .= getindex.(val,2)
+    #Calculate function values at every point in the mesh
+    problem.update.a_vec .= map(func,inner_grid)
+    problem.update.∂a∂x_vec .= map(func∂x,inner_grid)
+    problem.update.∂a∂y_vec .= map(func∂y,inner_grid)
 
     #Supercharged update of the nonzero entries of A
     #We iterate over the nonzero elements of the hessian because
@@ -27,6 +29,7 @@ function updateLinearSystem!(problem::EllipticPDE, time::Float64)
         end
     end
 
+    #Update right hand side
     rhs_func(x) = problem.rhs(x,time)
     problem.update.rhs_vec .= map(rhs_func,inner_grid);
 end

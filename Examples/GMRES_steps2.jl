@@ -18,17 +18,17 @@ using .LSMOD
 """
 
 N=1000
-M=35
-m=20
+M=20
+m=10
 p = 3
 
-Nys_k = 14
-Nys_p = 6
+Nys_k = 7
+Nys_p = 3
 
-Δt = 1e-3
+Δt = 1e-5
 t₀=0.1
 projection_error = true
-filename = pwd() * "/Examples/Data/10e_3_update.jld2"
+filename = pwd() * "/Examples/Data/10e_5_update.jld2"
 
 prob = LSMOD.Example1.make_prob(100)
 sol_base,_ = LSMOD.solve(t₀, Δt , N, deepcopy(prob));
