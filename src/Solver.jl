@@ -1,8 +1,19 @@
 import ProgressBars, Printf, Krylov, InvertedIndices, ILUZero
 
-function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, args...)
+function solve(t₀::Number, Δt::Number, N::Integer, problem::Problem, args...)
 	"""
 		Baseline iterative solver
+
+		Input:
+			- t₀ (Number): Initial time of the simulation
+			- Δt (Number): Timestep of the simulation
+			- N (Integer): Number of timesteps
+			- problem (Problem): problem to be solved
+			- args..
+		output:
+			- solutions (Array{Dict}): Array of dictionaries containing information about the results of the simulation
+			- LU (Matrix): Incomplete LU preconditioner at the last timestep
+			- mat (Matrix): Matrix of the result states  
 	"""
 	prevsol=[]
 	solutions = Array{Dict}(undef, N)
@@ -28,7 +39,22 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, args...)
 	return solutions,LU,mat
 end
 
-function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::Strategy, LS = FullLS!; projection_error=false)
+function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::Strategy, LS = FullLS; projection_error=false)
+	"""
+		Iterative solver using an initial guess strategy and optionally a randomized least squares method
+
+		Input:
+			- t₀ (Number): Initial time of the simulation
+			- Δt (Number): Timestep of the simulation
+			- N (Integer): Number of timesteps
+			- problem (Problem): problem to be solved
+			- strategy (Strategy): Initial guess strategy
+			- LS (Function) Optional : Randomized least squares method
+			- projection_error (Bool): Bool deciding whether or not the projection error of the approximation is calculated
+			- args..
+		output:
+			- solutions (Array{Dict}): Array of dictionaries containing information about the results of the simulation
+	"""
 	solutions = Array{Dict}(undef, N)
 	solutions[1:strategy.M],LU,mat = solve(t₀,Δt,strategy.M,problem)
 	strategy.solutions .= mat # Need more general strategy!
@@ -62,16 +88,28 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 	return solutions
 end
 
-function generate_guess(basis,problem,time; LS = FullLS)
-	# Modifies A or rhs to have smaller first dimension
-	# for faster least squares 
+function generate_guess(basis::Matrix,problem::Problem,time::Number; LS = FullLS)
+	"""
+		Generates an initial guess for GMRES with the help of a precomputed basis 
+		
+		Input:
+			- basis (Matrix): Reduced order Matrix
+			- problem (Problem): struct containing information about the problem
+			- time (Number): The current time 
+		Output:
+			- IG (Vector): Initial guess 
+			- timing (Dict): Detailed timing of the initial guess generation
+	"""
 
+	#Randomized least squares method modifies A and rhs for faster solving
 	red_time = @elapsed ind,A,rhs = LS(problem.update.A,problem.update.rhs_vec, problem,time)
 	
+	#Create reduced representation of A
 	AQ_time = @elapsed AQ = A * basis
 
-	#IG_small=copy(rhs)
-	LS_time = @elapsed _,ig,_=LAPACK.gels!('N',AQ,rhs) 
+	#Solve reduced LS problem  min ||AQs - b||
+	LS_time = @elapsed _,ig,_=LAPACK.gels!('N',AQ,rhs)
+	#Recover full representation 
 	IG_time = @elapsed IG = basis * ig
 
 	timing = Dict(:AQ => AQ_time, :LS => LS_time, :IG => IG_time, :red => red_time)
@@ -79,6 +117,9 @@ function generate_guess(basis,problem,time; LS = FullLS)
 end
 
 function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, precond;use_guess=true)
+	"""
+		Wrapper method for running gmres
+	"""
 	if use_guess
 		r0 = norm(rhs - A*initial_guess)
 		sv = copy(initial_guess)
@@ -91,7 +132,7 @@ function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, prec
 	res = norm(rhs - A*sol)
 	ProgressBars.set_postfix(iter, Iterations=Printf.@sprintf("%d",history.niter), r₀=Printf.@sprintf("%4.3e",r0/norm(rhs)), rₙ=Printf.@sprintf("%4.3e",res/norm(rhs)))
 	
-	#Could do this in one line
+	#Pad the solution by adding 0 boundary conditions
 	full_sol = zeros((problem.internal+2)^2)
 	full_sol[InvertedIndices.Not(problem.edge)] .= sol
 
@@ -100,10 +141,16 @@ function run_gmres!(initial_guess,A,rhs,iter,solutions, problem,index,time, prec
 end
 
 function proj(strategy::Strategy)
+	"""
+		Orthogonal basis projection error
+	"""
 	return norm(strategy.solutions - strategy.basis*strategy.basis' * strategy.solutions)/norm(strategy.solutions)
 end
 
 function proj(strategy::Nystrom)
+	"""
+		Nyström projection error
+	"""
 	A_r = (strategy.solutions*strategy.Ω₁)*pinv(strategy.Ω₂' * strategy.solutions*strategy.Ω₁)*(strategy.Ω₂' * strategy.solutions)
 	return norm(strategy.solutions - A_r)/norm(strategy.solutions)
 end

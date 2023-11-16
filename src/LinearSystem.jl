@@ -2,9 +2,15 @@ import InvertedIndices
 
 export updateLinearSystem!
 
-function updateLinearSystem!(problem::EllipticPDE, time::Float64)
+function updateLinearSystem!(problem::EllipticPDE, time::Number)
     """
-        Update linear system to be solved
+        Update linear system to be solved. We update quantities inside the problem struct 
+
+        Input:
+            - problem (EllipticPDE): struct containing information about problem to be solved
+            - time (Number): Current time
+        Output:
+            Nothing
     """
 
     #"Freeze" functions in time to simplify map

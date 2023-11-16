@@ -7,12 +7,10 @@ Row-sampling methods:
         - Look at H¹ norm
         - Look at largest ∂a/∂t 
 
-Column sampling?
-
 Should we sample with or without replacement?
 """
 
-function FullLS!(A::AbstractMatrix, rhs::AbstractVector,args...)
+function FullLS(A::AbstractMatrix, rhs::AbstractVector,args...)
     return range(1,size(A,1)), copy(A), copy(rhs)
 end
 

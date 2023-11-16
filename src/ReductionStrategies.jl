@@ -74,13 +74,12 @@ end
 
 function orderReduction!(strategy::RandomizedQR)
 	"""
-		Computes the randomized QR of a sample matrix
+		Computes the randomized QR (Range Finder) of a sample matrix
 	"""
+	#Updates the sketch
 	sketch_update!(strategy)
 
-	#Check out QRUpdate.jl?
-	#F = qr(strategy.Ω)
-	#strategy.basis .= @view Matrix(F.Q)[:, 1:strategy.m]
+	#Computes QR with LAPACK
 	tmp,tau=LAPACK.geqrf!(copy(strategy.Ω))
 	LAPACK.orgqr!(tmp,tau)
 	strategy.basis .= @view tmp[:,1:strategy.m]
