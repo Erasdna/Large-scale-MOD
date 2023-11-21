@@ -66,35 +66,22 @@ function extract_base(base,start,N)
     return ret
 end
 
-function GMRES_plot(baseline,sols,red,tags)
-    raw = Array{Float64}(undef,size(sols,1),size(sols,2),size(sols,4))
-    for i in range(1,size(sols,1))
-        raw[i,:,:] = baseline[:,3,:] ./ sols[i,:,3,:]
-    end
-    μ = mean(raw,dims=3)
-    σ = std(raw,dims=3)
-    fig = scatter(
-        lw=2,
-        guidefontsize=14,
-        tickfontsize=12,
-        legendfontsize=12,
-        xlabel="Rows",
-        ylabel="GMRES Speedup",
-        xaxis=:log
-    )
-    for i in range(1,size(raw,1))
-        scatter!(fig,red, μ[i,:],label = tags[i],yerror=σ[i,:])
-    end
 
-    return fig
-end
+function Total_speedup_plot(baselines,sols,red,tags)
+    raw_NYS = Array{Float64}(undef,size(sols[1],1),size(sols[1],2),2,size(sols[1],4))
+    raw_QR = Array{Float64}(undef,size(sols[1],1),size(sols[1],2),2,size(sols[1],4))
+    raw_SVD = Array{Float64}(undef,size(sols[1],1),size(sols[1],2),2,size(sols[1],4))
 
-function Total_speedup_plot(baseline,sols,red,tags)
-    raw = Array{Float64}(undef,size(sols,1),size(sols,2),2,size(sols,4))
-    for i in range(1,size(sols,1))
-        raw[i,:,:,:] = baseline[:,1:2,:] ./ sols[i,:,1:2,:]
+    for i in range(1,size(sols[3],1))
+        raw_NYS[i,:,:,:] = baselines[1][:,1:2,:] ./ sols[1][i,:,1:2,:]
+        raw_QR[i,:,:,:] = baselines[2][:,1:2,:] ./ sols[2][i,:,1:2,:]
+        raw_SVD[i,:,:,:] = baselines[3][:,1:2,:] ./ sols[3][i,:,1:2,:]
     end
-    μ = mean(raw,dims=4)
+    μ_NYS = mean(raw_NYS,dims=4)
+    μ_QR = mean(raw_QR,dims=4)
+    μ_SVD = mean(raw_SVD,dims=4)
+    μs = [μ_NYS,μ_QR,μ_SVD]
+
     fig1 = scatter(
         lw=2,
         guidefontsize=14,
@@ -111,37 +98,64 @@ function Total_speedup_plot(baseline,sols,red,tags)
         legendfontsize=12,
         xlabel="Rows",
         ylabel="Total Speedup",
-        xaxis=:log
+        xaxis=:log,
     )
-    for i in range(1,size(raw,1))
-        scatter!(fig1,red, μ[i,:,1],label = tags[i])
-        scatter!(fig2,red, μ[i,:,2],label = tags[i])
+    for i in range(1,length(μs))
+        scatter!(fig1,red, μs[i][1,:,1],label = tags[i],markersize=5.0)
+        scatter!(fig2,red, μs[i][1,:,2],label = tags[i],markersize=5.0)
     end
 
     return fig1,fig2
 end
 
-function Guess_generation_stats(baseline,sols,red,tags)
-    raw = Array{Float64}(undef,size(sols,1),size(sols,2),2,size(sols,4))
+function Guess_generation_stats(baseline,sols)
+    raw = Array{Float64}(undef,size(sols,1),size(sols,2),3,size(sols,4))
+    GMRES = Array{Float64}(undef,size(sols,1),size(sols,2))
     for i in range(1,size(sols,1))
-        raw[i,:,:,:] = baseline[:,4:5,:] ./ sols[i,:,4:5,:]
+        raw[i,:,:,:] = sols[i,:,4:6,:]*1000 # result in ms
+        GMRES[i,:] = sum(sols[i,:,3,:],dims=2) ./ sum(baseline[:,3,:],dims=2)
     end
-    μ = mean(raw,dims=4)
-    σ = std(raw,dims=4)
-    return μ,σ
+    μ = mean(raw,dims=4)[1,2,:,1]
+    return μ,GMRES[1,2]
 end
 
-filename = pwd() * "/Examples/Data/LS/10e_3_LS_RQR.jld2"
-savefile = pwd() * "/Figures/Examples/LS/10e_3_LS_RQR"
-dat = load(filename)
-M = dat["M"]
-N = dat["M"]
-n = dat["n"]
-tags = dat["LS"]
+filename_NYS = pwd() * "/Examples/Data/LS/"*ARGS[1]*"_LS_Nystrom.jld2"
+filename_QR = pwd() * "/Examples/Data/LS/"*ARGS[1]*"_LS_RQR.jld2"
+filename_SVD = pwd() * "/Examples/Data/LS/"*ARGS[1]*"_LS_RSVD.jld2"
+savefile = pwd() * "/Figures/Examples/LS/"*ARGS[1]*"_LS_comp"
+
+dat_NYS = load(filename_NYS)
+dat_QR = load(filename_QR)
+dat_SVD = load(filename_SVD)
+M = dat_NYS["M"]
+N = dat_NYS["M"]
+n = dat_NYS["n"]
+tags = dat_NYS["LS"]
 
 ind = [1,2,3,4]
 
-mat = extract(dat["sols"],M+1,501)
-base = extract_base(dat["base"],M+1,501)
-fig = GMRES_plot(base, mat[ind,:,:,:],n,tags[ind])
-fig2,fig3 = Total_speedup_plot(base, mat[ind,:,:,:],n,tags[ind])
+mat_NYS = extract(dat_NYS["sols"],M+1,501)
+mat_QR = extract(dat_QR["sols"],M+1,501)
+mat_SVD = extract(dat_SVD["sols"],M+1,501)
+
+
+base_NYS = extract_base(dat_NYS["base"],M+1,501)
+base_QR = extract_base(dat_QR["base"],M+1,501)
+base_SVD = extract_base(dat_SVD["base"],M+1,501)
+
+stats_NYS = Guess_generation_stats(base_NYS,mat_NYS)
+println("Nystrom")
+println(stats_NYS[1])
+println(stats_NYS[2])
+stats_QR = Guess_generation_stats(base_QR,mat_QR)
+println("QR")
+println(stats_QR[1])
+println(stats_QR[2])
+stats_SVD = Guess_generation_stats(base_SVD,mat_SVD)
+println("SVD")
+println(stats_SVD[1])
+println(stats_SVD[2])
+
+fig_Guess,fig_Total = Total_speedup_plot([base_NYS,base_QR,base_SVD], [mat_NYS,mat_QR,mat_SVD],n,["Nystrom", "Range Finder", "Randomized SVD"])
+savefig(fig_Guess,savefile*"_Guess.png")
+savefig(fig_Total,savefile*"_Total.png")

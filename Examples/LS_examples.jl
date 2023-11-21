@@ -26,8 +26,10 @@ if ARGS[1]=="Nystrom"
     orderReduction = LSMOD.Nystrom(prob.internal^2,M,Nys_k,Nys_p);
 elseif ARGS[1]=="RQR"
     orderReduction=LSMOD.RandomizedQR(prob.internal^2,M,m);
+elseif ARGS[1]=="RSVD"
+    orderReduction=LSMOD.RandomizedSVD(prob.internal^2,M,m);
 end
-LS_strats = [LSMOD.UniformRowSampledLS,LSMOD.NormRowSampledLS,LSMOD.H1RowSampledLS,LSMOD.dtRowSampledLS]
+LS_strats = [LSMOD.UniformRowSampledLS,LSMOD.NormRowSampledLS]
 sols=Matrix{Vector{Dict}}(undef,length(LS_strats),length(red))
 
 dummy = LSMOD.solve(t₀, Δt , 40, deepcopy(prob), deepcopy(orderReduction));

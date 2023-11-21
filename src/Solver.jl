@@ -39,7 +39,7 @@ function solve(t₀::Number, Δt::Number, N::Integer, problem::Problem, args...)
 	return solutions,LU,mat
 end
 
-function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::Strategy, LS = FullLS; projection_error=false)
+function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::Strategy, LS = nothing; projection_error=false)
 	"""
 		Iterative solver using an initial guess strategy and optionally a randomized least squares method
 
@@ -88,7 +88,7 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 	return solutions
 end
 
-function generate_guess(basis::Matrix,problem::Problem,time::Number; LS = FullLS)
+function generate_guess(basis::Matrix,problem::Problem,time::Number; LS = nothing)
 	"""
 		Generates an initial guess for GMRES with the help of a precomputed basis 
 		
@@ -102,8 +102,13 @@ function generate_guess(basis::Matrix,problem::Problem,time::Number; LS = FullLS
 	"""
 
 	#Randomized least squares method modifies A and rhs for faster solving
-	red_time = @elapsed ind,A,rhs = LS(problem.update.A,problem.update.rhs_vec, problem,time)
-	
+	if isnothing(LS)
+		rhs = copy(problem.update.rhs_vec)
+		A = problem.update.A
+		red_time=0
+	else 
+		red_time = @elapsed ind,A,rhs = LS(problem.update.A,problem.update.rhs_vec, problem,time)
+	end
 	#Create reduced representation of A
 	AQ_time = @elapsed AQ = A * basis
 

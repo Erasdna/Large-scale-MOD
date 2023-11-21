@@ -167,8 +167,8 @@ function orderReduction!(strategy::Nystrom)
 	"""
 		Computes the left side projection operator of the generalized Nystrom approximation
 	"""
-	strategy.Ω₁ .= randn(strategy.M,strategy.r)
-	strategy.Ω₂ .= randn(strategy.dim,strategy.r+strategy.l)
+	#strategy.Ω₁ .= randn(strategy.M,strategy.r)
+	#strategy.Ω₂ .= randn(strategy.dim,strategy.r+strategy.l)
 
 	# XΩ₁
 	mul!(strategy.prod1, strategy.solutions, strategy.Ω₁)
