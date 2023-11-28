@@ -71,14 +71,17 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 		if projection_error
 			tmp = proj(strategy)
 		end
-
-		#ProgressBars.println(iter," ||(I - QQᵀ)X||₂ ", norm((I(problem.internal^2) - basis * basis' )*mat))
+		
+		#Generate initial guess 
 		guess_time = @elapsed IG,guess_timing = generate_guess(strategy.basis,problem,time;LS=LS)
+		#Run GMRES
 		sol,GMRES_time =run_gmres!(IG,problem.update.A,problem.update.rhs_vec,iter,solutions,problem,i+strategy.M,time,LU)
+		#Calculate the projection errors
 		if projection_error
 			solutions[i+strategy.M][:proj] = tmp
 		end
-		#cycle_and_replace!(strategy.solutions,sol)
+
+		#Update history
 		strategy.solutions = circshift(strategy.solutions,(0,-1))
 		strategy.solutions[:,end] .= sol
 
@@ -101,7 +104,6 @@ function generate_guess(basis::Matrix,problem::Problem,time::Number; LS = nothin
 			- timing (Dict): Detailed timing of the initial guess generation
 	"""
 
-	#Randomized least squares method modifies A and rhs for faster solving
 	if isnothing(LS)
 		rhs = copy(problem.update.rhs_vec)
 		A = problem.update.A
@@ -109,6 +111,7 @@ function generate_guess(basis::Matrix,problem::Problem,time::Number; LS = nothin
 	else 
 		red_time = @elapsed ind,A,rhs = LS(problem.update.A,problem.update.rhs_vec, problem,time)
 	end
+	
 	#Create reduced representation of A
 	AQ_time = @elapsed AQ = A * basis
 
@@ -156,6 +159,7 @@ function proj(strategy::Nystrom)
 	"""
 		Nyström projection error
 	"""
-	A_r = (strategy.solutions*strategy.Ω₁)*pinv(strategy.Ω₂' * strategy.solutions*strategy.Ω₁)*(strategy.Ω₂' * strategy.solutions)
+	#A_r = (strategy.solutions*strategy.Ω₁)*pinv(strategy.Ω₂' * strategy.solutions*strategy.Ω₁)*(strategy.Ω₂' * strategy.solutions)
+	A_r = strategy.basis * (strategy.Ω₂' * strategy.solutions)
 	return norm(strategy.solutions - A_r)/norm(strategy.solutions)
 end

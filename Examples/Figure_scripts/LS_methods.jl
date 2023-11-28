@@ -121,7 +121,7 @@ function Total_speedup_plot(baseline,sols,red,tags)
     return fig1,fig2
 end
 
-function Guess_generation_stats(baseline,sols,red,tags)
+function Guess_generation_stats(baseline,sols)
     raw = Array{Float64}(undef,size(sols,1),size(sols,2),2,size(sols,4))
     for i in range(1,size(sols,1))
         raw[i,:,:,:] = baseline[:,4:5,:] ./ sols[i,:,4:5,:]
@@ -131,15 +131,15 @@ function Guess_generation_stats(baseline,sols,red,tags)
     return μ,σ
 end
 
-filename = pwd() * "/Examples/Data/LS/10e_3_LS_RQR.jld2"
-savefile = pwd() * "/Figures/Examples/LS/10e_3_LS_RQR"
+filename = pwd() * "/Examples/Data/LS/10e_5_LS_RQR.jld2"
+savefile = pwd() * "/Figures/Examples/LS/10e_5_LS_Nystrom"
 dat = load(filename)
 M = dat["M"]
 N = dat["M"]
 n = dat["n"]
 tags = dat["LS"]
 
-ind = [1,2,3,4]
+ind = [1,2]
 
 mat = extract(dat["sols"],M+1,501)
 base = extract_base(dat["base"],M+1,501)

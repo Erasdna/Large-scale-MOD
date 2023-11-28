@@ -33,17 +33,18 @@ LS_strats = [LSMOD.UniformRowSampledLS,LSMOD.NormRowSampledLS]
 sols=Matrix{Vector{Dict}}(undef,length(LS_strats),length(red))
 
 dummy = LSMOD.solve(t₀, Δt , 40, deepcopy(prob), deepcopy(orderReduction));
-
 base = LSMOD.solve(t₀, Δt , N, deepcopy(prob), deepcopy(orderReduction));
+
 for (i,strat) in enumerate(LS_strats)
     println(strat)
     for (j,n) in enumerate(red)
         LS_strategy(A,rhs,args...) = strat(A,rhs,n,args...)
+        LSMOD.solve(t₀, Δt , M+10, deepcopy(prob), deepcopy(orderReduction),LS_strategy);
         sols[i,j]=LSMOD.solve(t₀, Δt , N, deepcopy(prob), deepcopy(orderReduction),LS_strategy);
     end
 end
 
-filename = pwd() * "/Examples/Data/LS/"*ARGS[2]*"_LS_"*ARGS[1]*".jld2"
+filename = pwd() * "/Examples/Data/LS/"*ARGS[2]*"_LS_"*ARGS[1]*"_"*string(prob_size)*".jld2"
 
 save(filename, 
     Dict("base" => base,

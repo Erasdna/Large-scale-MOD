@@ -115,8 +115,8 @@ function Guess_generation_stats(baseline,sols)
         raw[i,:,:,:] = sols[i,:,4:6,:]*1000 # result in ms
         GMRES[i,:] = sum(sols[i,:,3,:],dims=2) ./ sum(baseline[:,3,:],dims=2)
     end
-    μ = mean(raw,dims=4)[1,2,:,1]
-    return μ,GMRES[1,2]
+    μ = mean(raw,dims=4)[1,3,:,1]
+    return μ,GMRES[1,3]
 end
 
 filename_NYS = pwd() * "/Examples/Data/LS/"*ARGS[1]*"_LS_Nystrom.jld2"
@@ -132,7 +132,7 @@ N = dat_NYS["M"]
 n = dat_NYS["n"]
 tags = dat_NYS["LS"]
 
-ind = [1,2,3,4]
+ind = [1,2]
 
 mat_NYS = extract(dat_NYS["sols"],M+1,501)
 mat_QR = extract(dat_QR["sols"],M+1,501)
@@ -143,14 +143,17 @@ base_NYS = extract_base(dat_NYS["base"],M+1,501)
 base_QR = extract_base(dat_QR["base"],M+1,501)
 base_SVD = extract_base(dat_SVD["base"],M+1,501)
 
+print(sum(base_NYS[1,4:6,:],dims=2))
 stats_NYS = Guess_generation_stats(base_NYS,mat_NYS)
 println("Nystrom")
 println(stats_NYS[1])
 println(stats_NYS[2])
+print(sum(base_QR[1,4:6,:],dims=2))
 stats_QR = Guess_generation_stats(base_QR,mat_QR)
 println("QR")
 println(stats_QR[1])
 println(stats_QR[2])
+print(sum(base_SVD[1,4:6,:],dims=2))
 stats_SVD = Guess_generation_stats(base_SVD,mat_SVD)
 println("SVD")
 println(stats_SVD[1])
