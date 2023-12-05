@@ -29,9 +29,8 @@ end
 
 mutable struct RandomizedQR <: RandomizedStrategy
 	const M::Integer
-	const k::Integer
-	const p::Integer
 	const m::Integer
+	const p::Integer
 	solutions::AbstractMatrix
 	basis::AbstractMatrix
 	Ω::AbstractMatrix
@@ -40,17 +39,16 @@ mutable struct RandomizedQR <: RandomizedStrategy
 	counter::Integer
 	const freq::Integer
 
-	function RandomizedQR(dim::Integer, M::Integer, k::Integer; freq::Integer = 50, p::Integer=0)
+	function RandomizedQR(dim::Integer, M::Integer, m::Integer; freq::Integer = 50, p::Integer=0)
 		return new(
 			M,
-			k,
+			m,
 			p,
-			k+p,
 			Matrix{Float64}(undef, dim, M), #History: R^(dim × M)
-			Matrix{Float64}(undef, dim, k), #reduced basis: R^(dim × m)
-			Matrix{Float64}(undef, dim, k+p),
-			Matrix{Float64}(undef, dim, k+p),
-			Matrix{Float64}(undef, M, k+p),
+			Matrix{Float64}(undef, dim, m), #reduced basis: R^(dim × m)
+			Matrix{Float64}(undef, dim, m+p),
+			Matrix{Float64}(undef, dim, m+p),
+			Matrix{Float64}(undef, M, m+p),
 			0,
 			freq,
 		)
@@ -62,11 +60,11 @@ function sketch_update!(strategy::RandomizedStrategy)
 		Builds and updates a sketch matrix of the sample
 	"""
 	if strategy.counter % strategy.freq == 0 || strategy.counter == 0
-		strategy.Z .= randn((strategy.M, strategy.m))
+		strategy.Z .= randn((strategy.M, strategy.m + strategy.p))
 		mul!(strategy.Ω, strategy.solutions, strategy.Z)
 		strategy.counter += 1
 	else
-		z = randn(strategy.m)
+		z = randn(strategy.m+strategy.p)
 		@. strategy.Ω += strategy.solutions[:, end] * (z') - strategy.old_Ω
 		strategy.Z .= circshift(strategy.Z, (-1, 0))
 		strategy.Z[end, :] .= z
@@ -85,13 +83,20 @@ function orderReduction!(strategy::RandomizedQR)
 
 	#Computes QR with LAPACK
 	tmp,tau=LAPACK.geqrf!(copy(strategy.Ω))
-	LAPACK.orgqr!(tmp,tau)
-	strategy.basis .= @view tmp[:,1:strategy.k]
+	if strategy.p !=0
+		R = @view triu(tmp)[1:strategy.m + strategy.p ,1:strategy.m + strategy.p]
+		fac = svd(R)
+		LAPACK.orgqr!(tmp,tau)
+		strategy.basis .= tmp * fac.U[:,1:strategy.m]
+	else
+		LAPACK.orgqr!(tmp,tau)
+		strategy.basis .= @view tmp[:,1:strategy.m]
+	end
+	
 end
 
 mutable struct RandomizedSVD <: RandomizedStrategy
 	const M::Integer
-	const k::Integer
 	const p::Integer
 	const m::Integer
 	solutions::AbstractMatrix
@@ -104,20 +109,18 @@ mutable struct RandomizedSVD <: RandomizedStrategy
 	counter::Integer
 	const freq::Integer
 
-	function RandomizedSVD(dim::Integer, M::Integer, k::Integer; freq::Integer = 50, p::Integer=0)
-		m=k+p
+	function RandomizedSVD(dim::Integer, M::Integer, m::Integer; freq::Integer = 50, p::Integer=0)
 		return new(
 			M,
-			k,
 			p,
 			m,
 			Matrix{Float64}(undef, dim, M), #History: R^(dim × M)
-			Matrix{Float64}(undef, dim, k), #reduced basis: R^(dim × m)
-			Matrix{Float64}(undef, dim, m),
-			Matrix{Float64}(undef, m, M),
-			Matrix{Float64}(undef, dim, m),
-			Matrix{Float64}(undef, dim, m),
-			Matrix{Float64}(undef, M, m),
+			Matrix{Float64}(undef, dim, m), #reduced basis: R^(dim × m)
+			Matrix{Float64}(undef, dim, m+p),
+			Matrix{Float64}(undef, m+p, M),
+			Matrix{Float64}(undef, dim, m+p),
+			Matrix{Float64}(undef, dim, m+p),
+			Matrix{Float64}(undef, M, m+p),
 			0,
 			freq,
 		)
@@ -138,14 +141,13 @@ function orderReduction!(strategy::RandomizedSVD)
 	#SVD
 	mul!(strategy.B, strategy.Q', strategy.solutions)
 	LAPACK.gesvd!('O','N',strategy.B)
-	strategy.basis .= @view (strategy.Q*strategy.B)[:, 1:strategy.k]
+	strategy.basis .= @view (strategy.Q*strategy.B)[:, 1:strategy.m]
 end
 
 mutable struct Nystrom <: RandomizedStrategy
 	const M::Integer
 	const k::Integer
 	const p::Integer
-	const truncate::Bool
 	solutions::AbstractMatrix
 	basis::AbstractMatrix
 	const Ω₁::AbstractMatrix # left sample matrix 
@@ -155,14 +157,13 @@ mutable struct Nystrom <: RandomizedStrategy
 	R::AbstractMatrix
 	const dim :: Integer
 
-	function Nystrom(dim::Integer, M::Integer, k::Integer, p::Integer; truncate::Bool = false)
+	function Nystrom(dim::Integer, M::Integer, k::Integer, p::Integer)
 		return new(
 			M,
 			k,
 			p,
-			truncate,
 			Matrix{Float64}(undef, dim, M),
-			truncate ? Matrix{Float64}(undef, dim, k) : Matrix{Float64}(undef, dim, k + p),
+			Matrix{Float64}(undef, dim, k + p),
 			randn(M, k),
 			randn(dim, k + p),
 			Matrix{Float64}(undef, dim, k),
@@ -188,9 +189,5 @@ function orderReduction!(strategy::Nystrom)
 	strategy.R .= @view triu(strategy.prod2)[1:strategy.k,1:strategy.k]
 	LAPACK.orgqr!(strategy.prod2,tau)
 
-	if strategy.truncate
-		mul!(strategy.basis,strategy.prod1 / strategy.R,strategy.prod2[1:strategy.k,:]')
-	else
-		mul!(strategy.basis,strategy.prod1 / strategy.R,strategy.prod2')
-	end
+	mul!(strategy.basis,strategy.prod1 / strategy.R,strategy.prod2')
 end

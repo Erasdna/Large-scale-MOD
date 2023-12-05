@@ -18,7 +18,7 @@ function extract(sols,start,N)
     ret = Array{Float64}(undef,size(sols,1),3,N-start)
     for i in range(1,size(sols,1))
         #extract timing 
-        _,_,guess,_,_,tot = extract_timing(sols[i],start)
+        _,_,_,_,guess,tot = extract_timing(sols[i],start)
         ret[i,1,:] = guess
         ret[i,2,:] = tot
         #extract GMRES iterations
@@ -44,29 +44,32 @@ function Total_speedup_plot(baseline,sols,p)
     raw = Array{Float64}(undef,size(sols,1))
     raw = sum(baseline[1,2,:]) ./ sum(sols[:,2,:],dims=2)
     
+    guess = sum(sols[:,1,:],dims=2)
+    println("Guess: ", guess)
+    GMRES = sum(baseline[1,3,:]) ./ sum(sols[:,3,:],dims=2)
+    println("GMRES: ", GMRES)
     fig1 = scatter(
         lw=2,
         guidefontsize=14,
         tickfontsize=12,
         legendfontsize=12,
-        xlabel="p",
+        xlabel="Oversampling parameter",
         ylabel="Total Speedup",
     )
-    #for i in range(1,size(raw,1))
-    scatter!(fig1,p, raw[:,1])
-    #end
+    scatter!(fig1,p .- 1, raw[:,1])
 
     return fig1
 end
 
-filename = pwd() * "/Examples/Data/Truncation/10e_3_truncation_RQR.jld2"
-savefile = pwd() * "/Figures/Examples/Truncation/10e_3_truncation_RQR"
+filename = pwd() * "/Examples/Data/Truncation/10e_5_truncation_Nystrom.jld2"
+savefile = pwd() * "/Figures/Examples/Truncation/10e_5_truncation_Nystrom"
 dat = load(filename)
 M = dat["M"]
-N = dat["M"]
+N = dat["N"]
 m = dat["m"]
-k₀ = dat["k₀"]
+pf = dat["pf"]
 
-mat = extract(dat["sols"],M+1,501)
-base = extract_base(dat["base"],M+1,501)
-fig1 = Total_speedup_plot(base, mat,collect(range(1,m-k₀)))
+mat = extract(dat["sols"],M+1,N+1)
+base = extract_base(dat["base"],M+1,N+1)
+fig1 = Total_speedup_plot(base, mat,collect(range(1,pf)))
+savefig(fig1,savefile*".png")

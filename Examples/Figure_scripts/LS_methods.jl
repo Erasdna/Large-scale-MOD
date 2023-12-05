@@ -131,8 +131,8 @@ function Guess_generation_stats(baseline,sols)
     return μ,σ
 end
 
-filename = pwd() * "/Examples/Data/LS/10e_5_LS_RQR.jld2"
-savefile = pwd() * "/Figures/Examples/LS/10e_5_LS_Nystrom"
+filename = pwd() * "/Examples/Data/LS/10e_3_LS_Nystrom_200.jld2"
+savefile = pwd() * "/Figures/Examples/LS/10e_3_LS_Nystrom_200"
 dat = load(filename)
 M = dat["M"]
 N = dat["M"]

@@ -101,8 +101,8 @@ function Total_speedup_plot(baselines,sols,red,tags)
         xaxis=:log,
     )
     for i in range(1,length(μs))
-        scatter!(fig1,red, μs[i][1,:,1],label = tags[i],markersize=5.0)
-        scatter!(fig2,red, μs[i][1,:,2],label = tags[i],markersize=5.0)
+        scatter!(fig1,red, μs[i][1,:,1],label = tags[i],markersize=7.0)
+        scatter!(fig2,red, μs[i][1,:,2],label = tags[i],markersize=7.0)
     end
 
     return fig1,fig2
@@ -128,7 +128,7 @@ dat_NYS = load(filename_NYS)
 dat_QR = load(filename_QR)
 dat_SVD = load(filename_SVD)
 M = dat_NYS["M"]
-N = dat_NYS["M"]
+N = dat_NYS["N"]
 n = dat_NYS["n"]
 tags = dat_NYS["LS"]
 
