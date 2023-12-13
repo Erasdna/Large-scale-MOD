@@ -141,7 +141,8 @@ function orderReduction!(strategy::RandomizedSVD)
 	#SVD
 	mul!(strategy.B, strategy.Q', strategy.solutions)
 	LAPACK.gesvd!('O','N',strategy.B)
-	strategy.basis .= @view (strategy.Q*strategy.B)[:, 1:strategy.m]
+	mat = @view strategy.B[:,1:strategy.m]
+	strategy.basis .= strategy.Q*mat
 end
 
 mutable struct Nystrom <: RandomizedStrategy

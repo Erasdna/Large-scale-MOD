@@ -1,6 +1,8 @@
-using LinearAlgebra, Revise, Plots, InvertedIndices, LaTeXStrings, BenchmarkTools, JLD2
+using LinearAlgebra, Revise, Plots, InvertedIndices, LaTeXStrings, BenchmarkTools, JLD2,Random
 include("../src/LSMOD.jl")
 using .LSMOD
+
+Random.seed!(parse(Int,ARGS[4]))
 
 const N=200
 if ARGS[2]=="10e_3"
@@ -16,7 +18,7 @@ elseif ARGS[2]=="10e_5"
 end
 
 const t₀=0.1
-const prob_size = 100
+#const prob_size = 100
 
 if ARGS[1]=="Nystrom"
     orderReduction(prob_size,m) = LSMOD.Nystrom(prob_size^2,M,m-nys_p,nys_p);
@@ -33,7 +35,7 @@ else
 end
 
 
-sizes = [240,200,160,120,80]
+sizes = [200,150,125,100,75]
 sols=Array{Vector{Dict}}(undef,length(sizes))
 base=Array{Vector{Dict}}(undef,length(sizes))
 
@@ -46,8 +48,8 @@ for p in range(1,length(sizes))
         n = trunc(Int,0.005*sizes[p]^2)
         println(n)
         LS(A,rhs,args...) = strat(A,rhs,n,args...)
-        LSMOD.solve(t₀, Δt , M+10, deepcopy(prob),deepcopy(reduction) );
-        base[p] = LSMOD.solve(t₀, Δt , N, deepcopy(prob),deepcopy(reduction));
+        LSMOD.solve(t₀, Δt , M+10, deepcopy(prob));
+        base[p],_,_ = LSMOD.solve(t₀, Δt , N, deepcopy(prob));
     else 
         LS=nothing
         LSMOD.solve(t₀, Δt , M+10, deepcopy(prob) );
@@ -58,7 +60,7 @@ for p in range(1,length(sizes))
     sols[p]=LSMOD.solve(t₀, Δt , N, deepcopy(prob), deepcopy(reduction),LS);
 end
 
-filename = pwd() * "/Examples/Data/Scaling/"*ARGS[2]*"_scaling_"*ARGS[1]*"_"*ARGS[3]*"_2.jld2"
+filename = pwd() * "/Examples/Data/Scaling/"*ARGS[2]*"_"*ARGS[3]*"/scaling_"*ARGS[1]*"_"*ARGS[4]*".jld2"
 
 save(filename, 
     Dict("base" => base,

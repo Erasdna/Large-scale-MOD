@@ -1,8 +1,11 @@
-using LinearAlgebra, Revise, Plots, InvertedIndices, LaTeXStrings, BenchmarkTools, JLD2
+using LinearAlgebra, Revise, Plots, InvertedIndices, LaTeXStrings, BenchmarkTools, JLD2, Random
 include("../src/LSMOD.jl")
 using .LSMOD
 
-const N=500
+
+Random.seed!(parse(Int64,ARGS[3]))
+
+const N=200
 if ARGS[2]=="10e_3"
     const M=35
     const m=20
@@ -29,28 +32,26 @@ elseif ARGS[1]=="RQR"
 elseif ARGS[1]=="RSVD"
     orderReduction=LSMOD.RandomizedSVD(prob.internal^2,M,m);
 end
-LS_strats = [LSMOD.UniformRowSampledLS,LSMOD.NormRowSampledLS]
-sols=Matrix{Vector{Dict}}(undef,length(LS_strats),length(red))
+strat = LSMOD.UniformRowSampledLS
+sols=Vector{Vector{Dict}}(undef,length(red))
 
 dummy = LSMOD.solve(t₀, Δt , 40, deepcopy(prob), deepcopy(orderReduction));
 base = LSMOD.solve(t₀, Δt , N, deepcopy(prob), deepcopy(orderReduction));
 
-for (i,strat) in enumerate(LS_strats)
-    println(strat)
-    for (j,n) in enumerate(red)
-        LS_strategy(A,rhs,args...) = strat(A,rhs,n,args...)
-        LSMOD.solve(t₀, Δt , M+10, deepcopy(prob), deepcopy(orderReduction),LS_strategy);
-        sols[i,j]=LSMOD.solve(t₀, Δt , N, deepcopy(prob), deepcopy(orderReduction),LS_strategy);
-    end
+for (j,n) in enumerate(red)
+    LS_strategy(A,rhs,args...) = strat(A,rhs,n,args...)
+    LSMOD.solve(t₀, Δt , M+10, deepcopy(prob), deepcopy(orderReduction),LS_strategy);
+    sols[j]=LSMOD.solve(t₀, Δt , N, deepcopy(prob), deepcopy(orderReduction),LS_strategy);
 end
 
-filename = pwd() * "/Examples/Data/LS/"*ARGS[2]*"_LS_"*ARGS[1]*"_"*string(prob_size)*".jld2"
+
+filename = pwd() * "/Examples/Data/LS/"*ARGS[2]*"_N="*string(prob_size)*"/LS_"*ARGS[1]*"_"*ARGS[3]*".jld2"
 
 save(filename, 
     Dict("base" => base,
         "sols" => sols,
          "n" => red,
-         "LS" => ["Uniform", "Norm","H1","dt","Gaussian"],
+         "LS" => "Uniform",
          "m" => m,
          "M" => M,
          "dt" => Δt,

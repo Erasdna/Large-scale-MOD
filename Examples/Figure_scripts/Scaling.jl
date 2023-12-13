@@ -18,7 +18,7 @@ extract_iters(v,start) = [v[el][:history].niter for el in range(start,length(v))
 function extract(sols,start,N)
     ret = Array{Float64}(undef,size(sols,1),3,N-start)
     for i in range(1,size(sols,1))
-        #extract timing 
+        #extract timing
         _,_,_,_,guess,tot = extract_timing(sols[i],start)
         ret[i,1,:] = guess
         ret[i,2,:] = tot
@@ -29,74 +29,77 @@ function extract(sols,start,N)
     return ret
 end
 
-function extract_base(base,start,N)
-    ret = Array{Float64}(undef,1,3,N-start)
-    #extract timing 
-    _,_,guess,tot,_,_ = extract_timing(base,start)
-    ret[1,1,:] = guess
-    ret[1,2,:] = tot
-    #extract GMRES iterations
-    ret[1,3,:] = extract_iters(base,start)
-
-    return ret
-end
-
 function Total_speedup_plot(fig,baseline,sols,sizes, tag)
-    raw = Array{Float64}(undef,size(sols,1))
-    GMRES = Array{Float64}(undef,size(sols,1))
-    for i in range(1,size(baseline,1))
-        GMRES[i] = sum(baseline[i,3,:]) ./ sum(sols[i,3,:])
+    raw = Array{Float64}(undef,size(sols,1),size(sols,2))
+    μ = Array{Float64}(undef,size(sols,2))
+    σ = Array{Float64}(undef,size(sols,2))
+    μ_GMRES = Array{Float64}(undef,size(sols,2))
+    σ_GMRES = Array{Float64}(undef,size(sols,2))
+    for i in range(1,size(sols,2))
+        μ_GMRES[i] = mean(sum(baseline[:,i,3,:],dims=2) ./ sum(sols[:,i,3,:],dims=2))
+        σ_GMRES[i] = std(sum(baseline[:,i,3,:],dims=2) ./ sum(sols[:,i,3,:],dims=2))
     end
     println(tag)
     println(sizes)
-    println("GMRES: ", GMRES)
+    println("GMRES: ", μ_GMRES)
+    println("σ: ", σ_GMRES)
 
-    for i in range(1,size(baseline,1))
-        raw[i] = sum(baseline[i,2,:]) ./ sum(sols[i,2,:])
+    for i in range(1,size(sols,2))
+        raw[:,i] = sum(baseline[:,i,2,:],dims=2) ./ sum(sols[:,i,2,:],dims=2)
+        μ[i] = mean(raw[:,i])
+        σ[i] = std(raw[:,i])
     end
 
-    guess = sum(sols[:,1,:],dims=2)./ sum(sols[:,2,:],dims=2)
+    guess = mean(sum(sols[:,:,1,:],dims=3)./ sum(sols[:,:,2,:],dims=3),dims=1)
+    guess_σ = std(sum(sols[:,:,1,:],dims=3)./ sum(sols[:,:,2,:],dims=3),dims=1)
     println("Guess: ", guess)
+    println("σ: ", guess_σ)
 
-    scatter!(fig,sizes, raw,markersize=7,label=tag)
+    scatter!(fig,sizes, μ, yerror=σ, markersize=7,label=tag,markerstrokecolor=:auto)
     return fig
 end
 
-function Split_speedup_scatter(fig,baseline,sols,tag,color)
 
-    guess = sum(sols[:,1,:],dims=2)
-    println("Guess: ", guess)
-    GMRES = Array{Float64}(undef,size(sols,1))
-    for i in range(1,size(baseline,1))
-        GMRES[i] = sum(sols[i,3,:]) ./ sum(baseline[i,3,:])
-    end
-    println("GMRES: ", GMRES)
-    shapes = [:star,:diamond,:circle,:hexagon, :ltriangle]
-    scatter!(fig,guess, GMRES,markershape=shapes,color=color,label=tag)
-end
-
+method="LS"
 dt = "10e_5"
-filename_NYS = pwd() * "/Examples/Data/Scaling/"*dt*"_scaling_Nystrom_LS.jld2"
-filename_QR = pwd() * "/Examples/Data/Scaling/"*dt*"_scaling_RQR_LS.jld2"
-filename_SVD = pwd() * "/Examples/Data/Scaling/"*dt*"_scaling_RSVD_LS.jld2"
-savefile = pwd() * "/Figures/Examples/Scaling/"*dt*"_scaling_comp_LS"
 
-dat_NYS = load(filename_NYS)
-dat_QR = load(filename_QR)
-dat_SVD = load(filename_SVD)
-M = dat_NYS["M"]
-N = dat_NYS["N"]
-sizes = dat_NYS["sizes"]
-ind = [1,2]
+#####
+tt = pwd() * "/Examples/Data/Scaling/"*dt*"_"*method*"/scaling_Nystrom_33.jld2"
+dat_tt = load(tt)
+M = dat_tt["M"]
+N = dat_tt["N"]
+sizes = dat_tt["sizes"]
+#####
 
-mat_NYS = extract(dat_NYS["sols"],M+1,N+1)
-mat_QR = extract(dat_QR["sols"],M+1,N+1)
-mat_SVD = extract(dat_SVD["sols"],M+1,N+1)
+start=33
+stop=38
+diff = stop - start + 1 
+full_NYS = Array{Float64}(undef,diff,5,3,N-M)
+full_QR = Array{Float64}(undef,diff,5,3,N-M)
+full_SVD = Array{Float64}(undef,diff,5,3,N-M)
+base = Array{Float64}(undef,diff,5,3,N-M)
+for i in range(start,stop)
+    filename_NYS = pwd() * "/Examples/Data/Scaling/"*dt*"_"*method*"/scaling_Nystrom_"*string(i)*".jld2"
+    filename_QR = pwd() * "/Examples/Data/Scaling/"*dt*"_"*method*"/scaling_RQR_"*string(i)*".jld2"
+    filename_SVD = pwd() * "/Examples/Data/Scaling/"*dt*"_"*method*"/scaling_RSVD_"*string(i)*".jld2"
+    
+    dat_NYS = load(filename_NYS)
+    dat_QR = load(filename_QR)
+    dat_SVD = load(filename_SVD)
+    
+
+    full_NYS[i-32,:,:,:]= extract(dat_NYS["sols"],M+1,N+1)
+    full_QR[i-32,:,:,:] = extract(dat_QR["sols"],M+1,N+1)
+    full_SVD[i-32,:,:,:] = extract(dat_SVD["sols"],M+1,N+1)
+    base_NYS = extract(dat_NYS["base"],M+1,N+1)
+    base_QR = extract(dat_QR["base"],M+1,N+1)
+    base_SVD = extract(dat_SVD["base"],M+1,N+1)
+    base[i-32,:,:,:] = (base_NYS + base_QR + base_SVD)/3
+
+end
+savefile = pwd() * "/Figures/Examples/Scaling/"*dt*"_"*method*"_seeds"
 
 
-base_NYS = extract(dat_NYS["base"],M+1,N+1)
-base_QR = extract(dat_QR["base"],M+1,N+1)
-base_SVD = extract(dat_SVD["base"],M+1,N+1)
 
 #Speedup as a function of the problem size
 fig = scatter(
@@ -107,21 +110,8 @@ fig = scatter(
         xlabel="Problem size",
         ylabel="Total Speedup",
     )
-Total_speedup_plot(fig,base_NYS,mat_NYS,sizes,"Nyström")
-Total_speedup_plot(fig,base_QR,mat_QR,sizes, "Range Finder")
-Total_speedup_plot(fig,base_SVD,mat_SVD,sizes, "Randomized SVD")
+Total_speedup_plot(fig,base,full_NYS,sizes,"Nyström")
+Total_speedup_plot(fig,base,full_QR,sizes, "Range Finder")
+Total_speedup_plot(fig,base,full_SVD,sizes, "Randomized SVD")
 
 savefig(fig,savefile*".png")
-
-# fig2 = scatter(
-#         lw=2,
-#         guidefontsize=14,
-#         tickfontsize=12,
-#         legendfontsize=12,
-#         xlabel="Initial guess speedup",
-#         ylabel="GMRES speedup",
-#     )
-
-# Split_speedup_scatter(fig2,base_NYS,mat_NYS,"Nyström",:blue)
-# Split_speedup_scatter(fig2,base_QR,mat_QR,"Range Finder", :green)
-# Split_speedup_scatter(fig2,base_SVD,mat_SVD, "Randomized SVD", :purple)

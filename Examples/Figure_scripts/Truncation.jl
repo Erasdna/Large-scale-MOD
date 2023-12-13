@@ -61,15 +61,22 @@ function Total_speedup_plot(baseline,sols,p)
     return fig1
 end
 
-filename = pwd() * "/Examples/Data/Truncation/10e_5_truncation_Nystrom.jld2"
-savefile = pwd() * "/Figures/Examples/Truncation/10e_5_truncation_Nystrom"
+filename = pwd() * "/Examples/Data/Truncation/10e_5_truncation_RSVD_33.jld2"
+filename2 = pwd() * "/Examples/Data/Truncation/10e_5_truncation_RSVD_35.jld2"
+
+savefile = pwd() * "/Figures/Examples/Truncation/10e_5_truncation_RSVD_33"
 dat = load(filename)
+dat2 = load(filename2)
 M = dat["M"]
 N = dat["N"]
 m = dat["m"]
 pf = dat["pf"]
 
-mat = extract(dat["sols"],M+1,N+1)
-base = extract_base(dat["base"],M+1,N+1)
+mat1 = extract(dat["sols"],M+1,N+1)
+mat2 = extract(dat2["sols"],M+1,N+1)
+mat = (mat1 .+ mat2)./2
+base1 = extract_base(dat["base"],M+1,N+1)
+base2 = extract_base(dat2["base"],M+1,N+1)
+base = (base1 .+ base2)./2
 fig1 = Total_speedup_plot(base, mat,collect(range(1,pf)))
 savefig(fig1,savefile*".png")

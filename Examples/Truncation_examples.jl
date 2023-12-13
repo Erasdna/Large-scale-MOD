@@ -1,6 +1,8 @@
-using LinearAlgebra, Revise, Plots, InvertedIndices, LaTeXStrings, BenchmarkTools, JLD2
+using LinearAlgebra, Revise, Plots, InvertedIndices, LaTeXStrings, BenchmarkTools, JLD2, Random
 include("../src/LSMOD.jl")
 using .LSMOD
+
+Random.seed!(parse(Int,ARGS[3]))
 
 const N=1000
 if ARGS[2]=="10e_3"
@@ -39,7 +41,7 @@ for p in range(1,pf)
     sols[p]=LSMOD.solve(t₀, Δt , N, deepcopy(prob), deepcopy(reduction));
 end
 
-filename = pwd() * "/Examples/Data/Truncation/"*ARGS[2]*"_truncation_"*ARGS[1]*".jld2"
+filename = pwd() * "/Examples/Data/Truncation/"*ARGS[2]*"_truncation_"*ARGS[1]*"_"*ARGS[3]*".jld2"
 
 save(filename, 
     Dict("base" => base,
