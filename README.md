@@ -92,7 +92,7 @@ The Generalized Nyström is given by: $\mathbf{X}\Omega_1(\Omega_2^\top \mathbf{
 
 This can be rewritten as a left and right side projector:
 $$
-\mathcal{P}_{\mathbf{X}\Omega_1,\Omega_2}\mathbf{X}\mathcal{P}_{\Omega_1,\mathbf{X}^\top \Omega_2} = 
+\mathcal{P}_l_\mathbf{X}\mathcal{P}_r = 
 \mathbf{X}\Omega_1(\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger}\Omega_2^\top \mathbf{X} \Omega_1 (\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger} \Omega_2^\top \mathbf{X}
 $$
 
