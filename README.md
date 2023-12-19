@@ -90,13 +90,8 @@ This method requires extra steps compared with the Randomized Range Finder, but 
 The Generalized Nyström is given by: $\mathbf{X}\Omega_1(\Omega_2^\top \mathbf{X}\Omega_1)^{\dagger}\Omega_2^\top \mathbf{X}$ 
 - Where $\Omega_1 \in \mathbb{R}^{M \times k}$ and  $\Omega_2 \in \mathbb{R}^{n \times (k+p)}$ are random matrices
 
-This can be rewritten as a left and right side projector:
-$$
-\mathbf{X}_{Nys} = 
-\mathbf{X}\Omega_1(\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger}\Omega_2^\top \mathbf{X} \Omega_1 (\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger} \Omega_2^\top \mathbf{X}
-$$
 
-And set $\mathbf{Q}=\mathbf{X}\Omega_1(\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger}$
+We will use $\mathbf{Q}=\mathbf{X}\Omega_1(\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger}$
 
 We implement the method in the following steps using $k+p=m$ and $p\in [0,k/2]$:
 1. Sample $\Omega_1 \in \mathbb{R}^{M \times k}$ and  $\Omega_2 \in \mathbb{R}^{n \times (k+p)}$
