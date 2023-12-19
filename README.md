@@ -93,8 +93,10 @@ The Generalized Nyström is given by: $\mathbf{X}\Omega_1(\Omega_2^\top \mathbf{
 This can be rewritten as a left and right side projector:
 $$
     \mathcal{P}_{\mathbf{X}\Omega_1,\Omega_2}\mathbf{X}\mathcal{P}_{\Omega_1,\mathbf{X}^\top \Omega_2} = 
-    \underbrace{\mathbf{X}\Omega_1(\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger}}_{\mathbf{Q}}\Omega_2^\top \mathbf{X} \Omega_1 (\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger} \Omega_2^\top \mathbf{X}
+    \mathbf{X}\Omega_1(\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger}\Omega_2^\top \mathbf{X} \Omega_1 (\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger} \Omega_2^\top \mathbf{X}
 $$
+
+And set $\mathbf{Q}=\mathbf{X}\Omega_1(\Omega_2^\top \mathbf{X} \Omega_1)^{\dagger}$
 
 We implement the method in the following steps using $k+p=m$ and $p\in [0,k/2]$:
 1. Sample $\Omega_1 \in \mathbb{R}^{M \times k}$ and  $\Omega_2 \in \mathbb{R}^{n \times (k+p)}$
@@ -112,7 +114,7 @@ $$
 \begin{align*}
 \nabla \cdot (a(\mathbf{x},t) \nabla f(\mathbf{x},t)) &= g(\mathbf{x},t) & \forall \mathbf{x} \in \Omega \\
 f(\mathbf{x},t) &= 0 & \forall \mathbf{x} \in \partial\Omega \nonumber \\
-&& \Omega \subset [0,1]^2
+& & \Omega \subset [0,1]^2
 \end{align*}
 $$
 We use the following function for $a$ and the exact solution $f$
