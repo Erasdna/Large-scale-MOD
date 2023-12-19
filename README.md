@@ -42,7 +42,7 @@ In particular we are interested in a case where $\mathbf{A}(t_i)$ is large, spar
 The initial guess approach involves three stages:
 1. Generate a reduced basis $\mathbf{Q}\in\mathbb{R}^{n\times m}$ from a history matrix $\mathbf{X}$ of the $M$ previous solutions
 **Assumption:** $m\leq M << n$
-2. Solve the reduced problem $\mathbf{s}^* =\argmin_{s\in \mathbb{R}^{m}} ||\mathbf{A}(t_i)\mathbf{X} s - \mathbf{b}(t_i)||_2$
+2. Solve the reduced problem $\mathbf{s}^* =\text{argmin}_{s\in \mathbb{R}^{m}} ||\mathbf{A}(t_i)\mathbf{X} s - \mathbf{b}(t_i)||_2$
 3. Run GMRES with starting vector $\mathbf{x}_0=\mathbf{X}\mathbf{s}^*$
 
 **Simply said**: We use the previous solution to create a smaller, more friendly space in which we can solve our problem (order reduction). Then we solve this smaller, much cheaper problem and hope that we get very close to the GMRES solution.
