@@ -32,9 +32,7 @@ The folder `src` contains the main components of the code:
 
 We consider a linear problem that evolves in time:
 $$
-\begin{equation*}
-    \mathbf{A}(t_i)\mathbf{x} = \mathbf{b}(t_i), \quad \mathbf{A}(t_i) \in \mathbb{R}^{n\times n}, \mathbf{b}(t_i)\in \mathbb{R}^{n}
-\end{equation*}
+\mathbf{A}(t_i)\mathbf{x} = \mathbf{b}(t_i), \quad \mathbf{A}(t_i) \in \mathbb{R}^{n\times n}, \mathbf{b}(t_i)\in \mathbb{R}^{n}
 $$
 
 In particular we are interested in a case where $\mathbf{A}(t_i)$ is large, sparse and not necessarily symmetric and therefore has to be solved using GMRES. In this project we consider such problems arising when solving PDEs numerically and we implement an example of a simple Elliptic PDE. The main goal of the project will be to speedup the solution of this problem by reducing the number of GMRES iterations necessary to converge to a good solution. We will do this be generating initial guesses for GMRES
@@ -44,8 +42,8 @@ In particular we are interested in a case where $\mathbf{A}(t_i)$ is large, spar
 The initial guess approach involves three stages:
 1. Generate a reduced basis $\mathbf{Q}\in\mathbb{R}^{n\times m}$ from a history matrix $\mathbf{X}$ of the $M$ previous solutions
 **Assumption:** $m\leq M << n$
-2. Solve the reduced problem $\mathbf{s}^* =\argmin\limits_{s\in \mathbb{R}^{m}} ||\mathbf{A}(t_i)\mathbf{X} s - \mathbf{b}(t_i)||_2$
-3. Run GMRES with starting vector $\mathbf{x}_0 = \mathbf{X}\mathbf{s}^*$
+2. Solve the reduced problem $\mathbf{s}^* =\argmin_{s\in \mathbb{R}^{m}} ||\mathbf{A}(t_i)\mathbf{X} s - \mathbf{b}(t_i)||_2$
+3. Run GMRES with starting vector $\mathbf{x}_0=\mathbf{X}\mathbf{s}^*$
 
 **Simply said**: We use the previous solution to create a smaller, more friendly space in which we can solve our problem (order reduction). Then we solve this smaller, much cheaper problem and hope that we get very close to the GMRES solution.
 
