@@ -61,18 +61,13 @@ function Total_speedup_plot(fig,baseline,sols,m_frac,Ms)
             raw[i,j] = mean(sum(baseline[:,2,:],dims=2) ./ sum(sols[:,i,j,2,:],dims=2))
             σ[i,j] = std(sum(baseline[:,2,:],dims=2) ./ sum(sols[:,i,j,2,:],dims=2))
         end
-        scatter!(fig,m_frac,raw[i,:],yerror = σ, markersize=7,label=string(Ms[i]),markerstrokecolor=:auto)
+        scatter!(fig,m_frac,raw[i,:],yerror = σ, markersize=7,label="M="*string(Ms[i]),markerstrokecolor=:auto)
     end
-
-    # guess = sum(sols[:,:,1,:],dims=3)./ sum(sols[:,:,2,:],dims=3)
-    # for i in range(1,size(sols,1))
-    #     println(Ms[i], ": ", guess[i,:])
-    # end
 
     return fig
 end
 
-dt = "10e_5"
+dt = "10e_3"
 filename = pwd() * "/Examples/Data/Finetune/"*dt*"_N=200/finetune_Nystrom_LS_33.jld2"
 savefile = pwd() * "/Figures/Examples/Finetune/"*dt*"_finetune_Nystrom_LS_seeds"
 

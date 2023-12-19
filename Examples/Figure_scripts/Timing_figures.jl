@@ -21,65 +21,56 @@ function extract_reduced_timing(data,start)
     return AQ,LS,IG
 end
 
-function solver_time(data,M::Integer,ind)
-    precon,basis,guess,gmres,non_gmres,_ = extract_timing(data,M)
-    iters = extract_iters(data,M)
-    println("basis: ", median(basis))
-    println("basis: ", median(basis)/4e-4)
-    println("GMRES time per iteration: ", sum(gmres)/sum(iters))
-    #Proportion of each timing
-    fig1 = scatter(ind, 
-            [cumsum(precon)[ind],cumsum(basis)[ind],cumsum(guess)[ind],cumsum(gmres)[ind]], 
-            label= ["Preconditioner" "Basis" "Guess" "GMRES"], 
-            lw=2,
-            xlabel="Timestep",
-            ylabel="Cumulative time [s]")
-    fig2 = scatter(ind, 
-            [non_gmres[ind],gmres[ind]], 
-            label= ["Initial guess" "GMRES"], 
-            lw=2,
-            xlabel="Timestep",
-            ylabel="Cumulative time [s]")
-    return fig1,fig2
+function extract(base,start,N)
+    ret = Array{Float64}(undef,6,N-start)
+    #extract timing 
+    _,basis,guess,_,_,tot = extract_timing(base,start)
+
+    ret[1,:] = guess
+    ret[2,:] = tot
+    #extract GMRES iterations
+    ret[3,:] = extract_iters(base,start)
+    AQ,LS, _ = extract_reduced_timing(base,start)
+    ret[4,:] = AQ 
+    ret[5,:] = LS
+    ret[6,:] = basis
+    return ret
 end
 
-function method_comp(base,method1, tag1::String, method2, tag2::String, method3,tag3,method4,tag4,M,ind)
-    b = extract_timing(base,M)
-    b_iters = extract_iters(base,M)
-    m1 = extract_timing(method1,M)
-    m1_iters = extract_iters(method1,M)
-    println(tag1, " ", sum(b_iters)/sum(m1_iters))
-    m2 = extract_timing(method2,M)
-    m2_iters = extract_iters(method2,M)
-    println(tag2, " ", sum(b_iters)/sum(m2_iters))
-    m3 = extract_timing(method3,M)
-    m3_iters = extract_iters(method3,M)
-    println(tag3, " ", sum(b_iters)/sum(m3_iters))
-    m4 = extract_timing(method4,M)
-    m4_iters = extract_iters(method4,M)
-    println(tag4, " ", sum(b_iters)/sum(m4_iters))
-    fig1 = scatter(ind, 
-            [m1[end][ind],m2[end][ind],m3[end][ind],m4[end][ind],b[end][ind]], 
-            label= [tag1 tag2 tag3 tag4 "base"], 
-            lw=2,
-            guidefontsize=14,
-            tickfontsize=12,
-            legendfontsize=12,
-            ylims=(0,maximum(b[end][ind])+0.001),
-            xlabel="Timestep",
-            ylabel="Time [s]")
-    bb=cumsum(b[end])
-    fig2 = scatter(ind, 
-            [(bb./cumsum(m1[end]))[ind],(bb./cumsum(m2[end]))[ind],(bb./cumsum(m3[end]))[ind],(bb./cumsum(m4[end]))[ind]], 
-            label= [tag1 tag2 tag3 tag4], 
-            lw=2,
-            guidefontsize=14,
-            tickfontsize=12,
-            legendfontsize=12,
-            xlabel="Timestep",
-            ylabel="Speedup")
-    return fig1,fig2
+function extract_base(base,start,N)
+    ret = Array{Float64}(undef,3,N-start)
+    #extract timing 
+    _,_,guess,_,_,tot = extract_timing(base,start)
+
+    ret[1,:] = guess
+    ret[2,:] = tot
+    #extract GMRES iterations
+    ret[3,:] = extract_iters(base,start)
+
+    return ret
 end
+
+
+function Total_speedup_plot(fig,fig2,baseline,sols,ind, tag)
+    μ = Array{Float64}(undef,size(sols,2),3,size(sols,4))
+    σ = Array{Float64}(undef,size(sols,2),3,size(sols,4))
+
+    for i in range(1,size(sols,2))
+        μ[i,:,:] = mean(cumsum(baseline,dims=3) ./ cumsum(sols[:,i,1:3,:],dims=3),dims=1) 
+        σ[i,:,:] = std(cumsum(baseline,dims=3) ./ cumsum(sols[:,i,1:3,:],dims=3),dims=1)
+        Plots.plot!(fig,ind,μ[i,2,ind], ribbon=σ[i,2,ind], linewidth=2, label=tag[i])
+        Plots.scatter!(fig2,ind,mean(sols[:,i,2,ind],dims=1)[:], markerstrokecolor=:auto, label=tag[i])
+        println(tags[i])
+        println("Basis ", mean(mean(sols[:,i,6,:],dims=2))*1000, " ± ", std(mean(sols[:,i,6,:],dims=2))*1000)
+        println("AQ ", mean(sols[:,i,4,:])*1000, " ± ", std(mean(sols[:,i,4,:],dims=2))*1000)
+        println("LS ", mean(sols[:,i,5,:])*1000, " ± ", std(mean(sols[:,i,5,:],dims=2))*1000)
+        println("GMRES ", mean(sum(baseline[:,3,:],dims=2) ./ sum(sols[:,i,3,:],dims=2)), " ± ", std(sum(baseline[:,3,:],dims=2) ./ sum(sols[:,i,3,:],dims=2)), " \n")
+    end
+    Plots.scatter!(fig2,ind,mean(baseline[:,2,ind],dims=1)[:], markerstrokecolor=:auto, label="Base")
+    return fig
+end
+
+
 
 function reduced_time(data,M::Integer, title::String, ind)
     AQ,LS,IG = extract_reduced_timing(data,M)
@@ -108,22 +99,53 @@ function save_img(list,start,tag,file,ind)
     end
 end
 
-filename = pwd() * "/Examples/Data/10e_3_update_33.jld2"
-savefile = pwd() * "/Figures/Examples/Timing/10e_3_update_33"
+tstep = ARGS[1]
+filename = pwd() * "/Examples/Data/"*tstep*"/final_33.jld2"
+savefile = pwd() * "/Figures/Examples/Timing/"*tstep*"_seeds"
+
+
 dat = load(filename)
-
-start = dat["M"]+2
+M = dat["M"]
+N = dat["N"]
 step = 10
-ind = 1:step:(dat["N"]-start)
+ind = (M+15):step:(N-M)
+start=33
+stop=38
+diff = stop - start + 1
 
-save_img(dat["base"],start,"base",savefile,ind)
-save_img(dat["POD"],start,"POD",savefile,ind)
-save_img(dat["RandQR"],start,"RangeFinder",savefile,ind)
-save_img(dat["RandSVD"],start,"RandomizedSVD",savefile,ind)
-save_img(dat["Nystrom"],start,"Nystrom",savefile,ind)
+full = Array{Float64}(undef,diff,4,6,N-M)
+full_base = Array{Float64}(undef,diff,3,N-M)
+tags = ["Nystrom", "POD", "RandQR", "RandSVD"]
+for i in range(start,stop)
+    fn = pwd() * "/Examples/Data/"*tstep*"/final_"*string(i)*"_2.jld2"
+    d = load(fn)
+    for (j,tag) in enumerate(tags)
+        full[i-start+1,j,:,:] = extract(d[tag],M+1,N+1)
+    end
+    full_base[i-start+1,:,:] = extract_base(d["base"],M+1,N+1)
+end
 
-f3,f4 = method_comp(dat["base"],dat["Nystrom"],"Nystrom",dat["POD"],"POD",dat["RandQR"],"RangeFinder", dat["RandSVD"], "Randomized SVD", start,ind)
-savefig(f3, savefile*"/comp.png")
-savefig(f3, savefile*"/comp.svg")
-savefig(f4, savefile*"/cumulative_comp.png")
-savefig(f4, savefile*"/cumulative_comp.svg")
+#Speedup as a function of the problem size
+fig = Plots.plot(
+        lw=2,
+        guidefontsize=14,
+        tickfontsize=12,
+        legendfontsize=12,
+        xlabel="Iteration",
+        ylabel="Speedup",
+    )
+
+fig2 = Plots.plot(
+        lw=2,
+        guidefontsize=14,
+        tickfontsize=12,
+        legendfontsize=12,
+        xlabel="Iteration",
+        ylabel="Total GMRES time [s]",
+    )
+plot_tags = ["Nyström", "POD", "Range Finder", "Randomized SVD"]
+Total_speedup_plot(fig,fig2,full_base,full,ind,plot_tags)
+display(fig)
+savefig(fig,savefile*"/speedup_"*tstep*"_2.png")
+savefig(fig2,savefile*"/vals_"*tstep*"_2.png")
+

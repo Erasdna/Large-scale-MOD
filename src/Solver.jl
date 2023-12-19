@@ -55,7 +55,6 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 			- strategy (Strategy): Initial guess strategy
 			- LS (Function) Optional : Randomized least squares method
 			- projection_error (Bool): Bool deciding whether or not the projection error of the approximation is calculated
-			- args..
 		output:
 			- solutions (Array{Dict}): Array of dictionaries containing information about the results of the simulation
 	"""
@@ -75,7 +74,7 @@ function solve(t₀::Number, Δt::Number, N::Int64, problem::Problem, strategy::
 		if projection_error
 			tmp = proj(strategy)
 		end
-
+		
 		#Generate initial guess 
 		guess_time = @elapsed IG, guess_timing = generate_guess(strategy.basis, problem, time; LS = LS)
 		#Run GMRES
@@ -103,6 +102,7 @@ function generate_guess(basis::Matrix, problem::Problem, time::Number; LS = noth
 			- basis (Matrix): Reduced order Matrix
 			- problem (Problem): struct containing information about the problem
 			- time (Number): The current time 
+			- LS (Optional): Applies a reduction strategy to the initial guess least squares problem
 		Output:
 			- IG (Vector): Initial guess 
 			- timing (Dict): Detailed timing of the initial guess generation
@@ -121,7 +121,7 @@ function generate_guess(basis::Matrix, problem::Problem, time::Number; LS = noth
 
 	#Solve reduced LS problem  min ||AQs - b||
 	LS_time = @elapsed _, ig, _ = LAPACK.gels!('N', AQ, rhs)
-	@info size(basis)
+
 	#Recover full representation 
 	IG_time = @elapsed IG = basis * ig
 
@@ -164,7 +164,6 @@ function proj(strategy::Nystrom)
 	"""
 		Nyström projection error
 	"""
-	#A_r = (strategy.solutions*strategy.Ω₁)*pinv(strategy.Ω₂' * strategy.solutions*strategy.Ω₁)*(strategy.Ω₂' * strategy.solutions)
 	A_r = strategy.basis * (strategy.Ω₂' * strategy.solutions)
 	return norm(strategy.solutions - A_r) / norm(strategy.solutions)
 end

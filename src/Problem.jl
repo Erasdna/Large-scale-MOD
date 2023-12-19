@@ -18,6 +18,7 @@ struct DifferentialOperators2D <: DifferentialOperators
 	function DifferentialOperators2D(N::Int64, hx::Float64, hy::Float64)
 		#Fourth order discretisation
 
+		#First order derivative
 		D = spdiagm(
 			-2 => (1) .* ones(N - 2),
 			-1 => (-8) .* ones(N - 1),
@@ -25,6 +26,7 @@ struct DifferentialOperators2D <: DifferentialOperators
 			1 => (8) .* ones(N - 1),
 		)
 
+		#Second order derivative
 		DD = spdiagm(
 			-2 => (-1) .* ones(N - 2),
 			-1 => (16) .* ones(N - 1),

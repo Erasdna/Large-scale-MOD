@@ -1,31 +1,34 @@
 import StatsBase
 
-"""
-Row-sampling methods:
-    - take max norm of each row
-    - Use the function a directly:
-        - Look at H¹ norm
-        - Look at largest ∂a/∂t 
-
-Should we sample with or without replacement?
-"""
-
 function FullLS(A::AbstractMatrix, rhs::AbstractVector,args...)
+    """
+        Baseline method, returns copy of system
+    """
     return range(1,size(A,1)), copy(A), copy(rhs)
 end
 
 function UniformRowSampledLS(A::AbstractMatrix, rhs::AbstractVector, N::Integer, args...)
+    """
+        Sample N rows uniformly
+    """
     ind=StatsBase.sample(1:size(A,1),N;ordered=true)
     return ind, A[ind,:], rhs[ind]
 end
 
 function NormRowSampledLS(A::AbstractMatrix, rhs::AbstractVector, N::Integer, args...)
+    """
+        Sample rows weighted by the norm of each row
+    """
     weights = StatsBase.weights(sum(A.^2;dims=2))
     ind=StatsBase.sample(1:size(A,1),weights,N;ordered=true)
     return ind, A[ind,:], rhs[ind]
 end
 
 function H1RowSampledLS(A::AbstractMatrix, rhs::AbstractVector, N::Integer, problem::EllipticPDE, time::Number, args...)
+    """
+        Sample rows of A based on the H1 norm of the wave speed a 
+            - Context: We consider a problem like ∇(a∇f)=g
+    """
     func(x::Tuple) = problem.a.a(x,time)
     func∂x(x::Tuple) = problem.a.∂a∂x(x,time)
     func∂y(x::Tuple) = problem.a.∂a∂y(x,time)
@@ -38,6 +41,10 @@ function H1RowSampledLS(A::AbstractMatrix, rhs::AbstractVector, N::Integer, prob
 end
 
 function dtRowSampledLS(A::AbstractMatrix, rhs::AbstractVector, N::Integer, problem::EllipticPDE, time::Number, args...)
+    """
+        Sample rows of A based on the largest value of the time-derivative of a
+            - Context: We consider a problem like ∇(a∇f)=g
+    """
     func(x::Tuple) = problem.a.∂a∂t(x,time)
     inner_grid = vcat(problem.inner_grid)
 
@@ -48,6 +55,9 @@ function dtRowSampledLS(A::AbstractMatrix, rhs::AbstractVector, N::Integer, prob
 end
 
 function GaussianSketchLS(A::AbstractMatrix, rhs::AbstractVector, N::Integer,args...)
+    """
+        Implements a Gaussian sketch as an alternative to row sampling
+    """
     Ω = randn(N,size(A,1))
     return N, Ω * A, Ω*rhs
 end

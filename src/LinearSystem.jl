@@ -26,8 +26,7 @@ function updateLinearSystem!(problem::EllipticPDE, time::Number)
     problem.update.∂a∂y_vec .= map(func∂y,inner_grid)
 
     #Supercharged update of the nonzero entries of A
-    #We iterate over the nonzero elements of the hessian because
-    #the sparsity structure of this matrix is constant
+    #We iterate over the nonzero elements of the hessian because the sparsity structure of this matrix is constant
     @inbounds @simd for col in 1:size(problem.∂D.Δ,2)
         for r in nzrange(problem.∂D.Δ,col)
             row = rowvals(problem.∂D.Δ)[r]

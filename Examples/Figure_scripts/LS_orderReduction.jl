@@ -48,7 +48,7 @@ function extract(sols,start,N)
 end
 
 function extract_base(base,start,N)
-    ret = Array{Float64}(undef,3,N-start)
+    ret = Array{Float64}(undef,6,N-start)
     #extract timing 
     _,_,guess,_,_,tot = extract_timing(base,start)
 
@@ -56,7 +56,10 @@ function extract_base(base,start,N)
     ret[2,:] = tot
     #extract GMRES iterations
     ret[3,:] = extract_iters(base,start)
-
+    AQ,LS,_,red = extract_reduced_timing(base,start)
+    ret[4,:] = AQ
+    ret[5,:] = LS 
+    ret[6,:] = red
     return ret
 end
 
@@ -78,6 +81,10 @@ function Total_speedup_plot(fig,fig_guess,baseline,sols,sizes, tag)
     println("GMRES: ", μ_GMRES)
     println("σ: ", σ_GMRES)
 
+    println("Baseline:")
+    print("AQ: ", mean(baseline[:,4,:])*1000, "±", std(baseline[:,4,:])*1000)
+    print(" LS: ", mean(baseline[:,5,:])*1000, "±", std(baseline[:,5,:])*1000)
+    print(" red: ", mean(baseline[:,6,:])*1000, "±", std(baseline[:,6,:])*1000, "\n")
     for i in range(1,size(sols,2))
         raw[:,i] = sum(baseline[:,2,:],dims=2) ./ sum(sols[:,i,2,:],dims=2)
         μ[i] = mean(raw[:,i])
@@ -90,13 +97,14 @@ function Total_speedup_plot(fig,fig_guess,baseline,sols,sizes, tag)
         print(" LS: ", mean(sols[:,i,5,:])*1000, "±", std(sols[:,i,5,:])*1000)
         print(" red: ", mean(sols[:,i,6,:])*1000, "±", std(sols[:,i,6,:])*1000, "\n")
     end
+    
 
     guess = mean(sum(sols[:,:,1,:],dims=3)./ sum(sols[:,:,2,:],dims=3),dims=1)
     guess_σ = std(sum(sols[:,:,1,:],dims=3)./ sum(sols[:,:,2,:],dims=3),dims=1)
     println("Guess: ", guess)
     println("σ: ", guess_σ)
 
-    scatter!(fig,sizes, μ, yerror=σ, markersize=7,label=tag,markerstrokecolor=:auto)
+    scatter!(fig,sizes[1:end-1], μ[1:end-1], yerror=σ[1:end-1], markersize=7,label=tag,markerstrokecolor=:auto)
     scatter!(fig_guess,sizes, g_μ, yerror=g_σ, markersize=7,label=tag,markerstrokecolor=:auto)
     return fig
 end
@@ -130,9 +138,9 @@ diff = stop - start + 1
 full_NYS = Array{Float64}(undef,diff,6,6,N-M)
 full_QR = Array{Float64}(undef,diff,6,6,N-M)
 full_SVD = Array{Float64}(undef,diff,6,6,N-M)
-base_QR = Array{Float64}(undef,diff,3,N-M)
-base_NYS = Array{Float64}(undef,diff,3,N-M)
-base_SVD = Array{Float64}(undef,diff,3,N-M)
+base_QR = Array{Float64}(undef,diff,6,N-M)
+base_NYS = Array{Float64}(undef,diff,6,N-M)
+base_SVD = Array{Float64}(undef,diff,6,N-M)
 
 for i in range(start,stop)
     filename_NYS = pwd() * "/Examples/Data/LS/"*timestep*"_N="*prob_size*"/LS_Nystrom_"*string(i)*".jld2"
@@ -171,6 +179,8 @@ fig_guess = scatter(
         ylabel="Guess Speedup",
         xaxis=:log,
     )
+println(n)
+#bb = (base_NYS + base_QR + base_SVD) ./ 3
 Total_speedup_plot(fig,fig_guess, base_NYS,full_NYS,n,"Nyström")
 Total_speedup_plot(fig,fig_guess, base_QR,full_QR,n, "Range Finder")
 Total_speedup_plot(fig,fig_guess, base_SVD,full_SVD,n, "Randomized SVD")

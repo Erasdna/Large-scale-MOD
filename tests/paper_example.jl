@@ -14,8 +14,6 @@ Nys_p = 3
 t₀=0.1
 
 sols,_ = LSMOD.solve(t₀, Δt, N, prob);
-#RandNYS = LSMOD.Nystrom(prob.internal^2,M,Nys_k,Nys_p)
-#sols = LSMOD.solve(t₀, Δt , N, prob, RandNYS)
 
 eff(x) = LSMOD.Example1.exact1(x, sols[end][:time])
 

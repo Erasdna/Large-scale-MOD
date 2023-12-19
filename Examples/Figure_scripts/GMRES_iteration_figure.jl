@@ -2,8 +2,8 @@ using JLD2,Plots, LaTeXStrings
 include(pwd()*"/src/LSMOD.jl")
 using .LSMOD
 
-filename = pwd() * "/Examples/Data/10e_5_update.jld2"
-savefile = pwd() * "/Figures/Examples/GMRES/10e_5_update"
+filename = pwd() * "/Examples/Data/10e_3/final_33_2.jld2"
+savefile = pwd() * "/Figures/Examples/GMRES/10e_3_final_33_2"
 dat = load(filename)
 
 start = dat["M"]+1
@@ -27,7 +27,7 @@ fig = scatter(ind,
             guidefontsize=14,
             tickfontsize=12,
             legendfontsize=12,
-            xlabel="Timestep",
+            markerstrokecolor=:auto,
+            xlabel="Iteration",
             ylabel="GMRES iterations")
 Plots.savefig(fig,savefile*".png")
-Plots.savefig(fig,savefile*".svg")

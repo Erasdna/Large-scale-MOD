@@ -21,7 +21,7 @@ end
 
 function orderReduction!(strategy::POD)
 	"""
-		Calculates SVD of a sample matrix
+		Applies the POD by calculating the SVD of the matrix and then truncating to m columns
 	"""
 	F = svd(strategy.solutions)
 	strategy.basis .= @view Matrix(F.U)[:, 1:strategy.m]
@@ -77,12 +77,18 @@ end
 function orderReduction!(strategy::RandomizedQR)
 	"""
 		Computes the randomized QR (Range Finder) of a sample matrix
+
+		We want to find a Q so that it approximates the range of a matrix A.
+		First we apply a random Gaussian sketch to A: Z = AΩ
+		Then perform QR(Z) = [Q,R] and return R
 	"""
 	#Updates the sketch
 	sketch_update!(strategy)
 
 	#Computes QR with LAPACK
 	tmp,tau=LAPACK.geqrf!(copy(strategy.Ω))
+
+	#If p is non-zero we truncate by performing a SVD on R
 	if strategy.p !=0
 		R = @view triu(tmp)[1:strategy.m + strategy.p ,1:strategy.m + strategy.p]
 		fac = svd(R)
@@ -90,7 +96,7 @@ function orderReduction!(strategy::RandomizedQR)
 		strategy.basis .= tmp * fac.U[:,1:strategy.m]
 	else
 		LAPACK.orgqr!(tmp,tau)
-		strategy.basis .= @view tmp[:,1:strategy.m]
+		strategy.basis .= tmp
 	end
 	
 end
@@ -130,6 +136,11 @@ end
 function orderReduction!(strategy::RandomizedSVD)
 	"""
 		Computes the randomized SVD of a sample matrix
+
+		We first apply the randomized Range Finder to obtain a matrix Q₁
+		Then we calculate B = Q₁ᵀA
+		Perform SVD of B = [U,Σ,V]
+		and then finally return Q = Q₁U
 	"""
 	#sketch
 	sketch_update!(strategy)
@@ -178,6 +189,10 @@ end
 function orderReduction!(strategy::Nystrom)
 	"""
 		Computes the left side projection operator of the generalized Nystrom approximation
+		
+		Where A ≈ XΩ₁(Ω₂ᵀXΩ₁)^† Ω₂ᵀX
+		Rewrite as A ≈ XΩ₁(Ω₂ᵀXΩ₁)^†(Ω₂ᵀXΩ₁)(Ω₂ᵀXΩ₁)^†Ω₂ᵀX
+		We take our matrix Q = XΩ₁(Ω₂ᵀXΩ₁)^†
 	"""
 	
 	# XΩ₁
@@ -186,9 +201,5 @@ function orderReduction!(strategy::Nystrom)
 	mul!(strategy.prod2, strategy.Ω₂', strategy.prod1)
 
 	# XΩ₁(Ω₂ᵀXΩ₁)^†
-	_,tau=LAPACK.geqrf!(strategy.prod2)
-	strategy.R .= @view triu(strategy.prod2)[1:strategy.k,1:strategy.k]
-	LAPACK.orgqr!(strategy.prod2,tau)
-
-	mul!(strategy.basis,strategy.prod1 / strategy.R,strategy.prod2')
+	mul!(strategy.basis,strategy.prod1,pinv(strategy.prod2))
 end
