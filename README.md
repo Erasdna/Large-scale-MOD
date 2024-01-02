@@ -3,7 +3,7 @@
 # Large-scale-MOD
 Semester project in the ANCHP chair at EPFL supervised by Prof. Daniel Kressner and Margherita Guido
 
-## How to use:
+## How to run:
 
 1. Install Julia (for example from [here](https://julialang.org/downloads/))
 2. Open the repository in your terminal. Type `julia`, this opens the REPL
@@ -15,6 +15,35 @@ While this environment is active you can run code from the project within it. `E
 
 You can also run Julia as a script by writing:
 `julia --project=<path-to-repo> <Location-of-file-to-be-ran>`
+
+### Basic example:
+
+To simplify building a problem we have made an example. You can specify the dimension $N$:
+
+```julia
+N=1000
+Δt = 1e-5
+t₀=0.1
+
+N = 100 
+prob = LSMOD.Example1.make_prob(N)
+```
+An order reduction strategy can be specified as:
+```julia
+RandNYS = LSMOD.Nystrom(prob.internal^2,35,14,6);
+```
+Where we use the Nyström method as an example with $M=35$ and $k=14$, $p=6$. Other strategies can be found in `src/ReductionStrategies.jl`.
+
+A sampling strategy can be specified as:
+```julia
+rows=50
+LS_strat(A,rhs,args...) = LSMOD.UniformRowSampledLS(A,rhs,rows,args...)
+```
+We can finally run the solver using these reduction strategies:
+```julia
+sol = LSMOD.solve(t₀, Δt , N, deepcopy(prob), RandNYS, LS_strat);
+```
+
 ## Overview of the code
 
 The folder `src` contains the main components of the code:

@@ -132,7 +132,7 @@ fig = Plots.plot(
         tickfontsize=12,
         legendfontsize=12,
         xlabel="Iteration",
-        ylabel="Speedup",
+        ylabel="Total Speedup",
     )
 
 fig2 = Plots.plot(

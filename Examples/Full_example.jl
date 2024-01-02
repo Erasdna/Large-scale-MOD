@@ -45,7 +45,7 @@ LS_strat(A,rhs,args...) = LSMOD.UniformRowSampledLS(A,rhs,rows,args...)
 prob = LSMOD.Example1.make_prob(100)
 
 #Solve using base method (=use previous state)
-sol_base,_ = LSMOD.solve(t₀, Δt , N, deepcopy(prob));
+sol_base,_,_ = LSMOD.solve(t₀, Δt , N, deepcopy(prob));
 
 #Initialize randomized Nyström
 RandNYS = LSMOD.Nystrom(prob.internal^2,M,Nys_k,Nys_p);
