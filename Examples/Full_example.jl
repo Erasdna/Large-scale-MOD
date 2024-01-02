@@ -17,7 +17,7 @@ using .LSMOD
             - Fourth order discretisation scheme in time
 """
 
-N=1000
+N=500
 rows = truncate(Int,N*0.005)
 Δt = 1e-5
 t₀=0.1
