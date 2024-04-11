@@ -1,6 +1,5 @@
-[toc]
 
-# Large-scale-MOD
+# Large Scale Model Order Reduction
 Semester project in the ANCHP chair at EPFL supervised by Prof. Daniel Kressner and Margherita Guido
 
 ## How to run:
